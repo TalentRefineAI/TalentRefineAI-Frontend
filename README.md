@@ -147,14 +147,14 @@ docker-compose up
 
 La aplicación incluye 6 candidatos simulados con perfiles diversos:
 
-| Candidato | Experiencia | Ubicación | Habilidades | Score |
-|-----------|-------------|-----------|-------------|-------|
-| María García López | 7 años | Madrid | Python, FastAPI, AWS | 95% |
-| Juan Rodríguez Martínez | 5 años | Barcelona | React, JavaScript | 82% |
-| Ana Fernández Pérez | 8 años | Valencia | DevOps, Kubernetes | 88% |
-| Carlos López Jiménez | 6 años | Madrid | Data Science, ML | 80% |
-| Sofía González Ruiz | 4 años | Bilbao | QA, Automation | 75% |
-| Miguel Sánchez Torres | 9 años | Madrid | System Architecture | 92% |
+| Candidato               | Experiencia | Ubicación | Habilidades          | Score |
+| ----------------------- | ----------- | --------- | -------------------- | ----- |
+| María García López      | 7 años      | Madrid    | Python, FastAPI, AWS | 95%   |
+| Juan Rodríguez Martínez | 5 años      | Barcelona | React, JavaScript    | 82%   |
+| Ana Fernández Pérez     | 8 años      | Valencia  | DevOps, Kubernetes   | 88%   |
+| Carlos López Jiménez    | 6 años      | Madrid    | Data Science, ML     | 80%   |
+| Sofía González Ruiz     | 4 años      | Bilbao    | QA, Automation       | 75%   |
+| Miguel Sánchez Torres   | 9 años      | Madrid    | System Architecture  | 92%   |
 
 ## 🔌 Integración con API Real (Fase 2)
 
@@ -188,13 +188,13 @@ El tema visual se configura en `app.py`. Puedes personalizar:
 
 ## 📦 Dependencias
 
-| Librería | Versión | Propósito |
-|----------|---------|----------|
-| streamlit | 1.28.1 | Framework web principal |
-| requests | 2.31.0 | Cliente HTTP para API |
-| python-dotenv | 1.0.0 | Gestión de variables de entorno |
-| pandas | 2.1.1 | Análisis y manipulación de datos |
-| pillow | 10.0.1 | Procesamiento de imágenes |
+| Librería      | Versión | Propósito                        |
+| ------------- | ------- | -------------------------------- |
+| streamlit     | 1.28.1  | Framework web principal          |
+| requests      | 2.31.0  | Cliente HTTP para API            |
+| python-dotenv | 1.0.0   | Gestión de variables de entorno  |
+| pandas        | 2.1.1   | Análisis y manipulación de datos |
+| pillow        | 10.0.1  | Procesamiento de imágenes        |
 
 ## 🔒 Variables de Entorno (Fase 2)
 
