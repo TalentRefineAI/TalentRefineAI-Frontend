@@ -1,0 +1,67 @@
+{
+  "test_queries": [
+    {
+      "title": "Desarrollador Backend Senior",
+      "query": "Buscamos un ingeniero backend senior con experiencia sólida en Python, FastAPI y bases de datos PostgreSQL. Debe tener al menos 6 años de experiencia en desarrollo de APIs REST y microservicios. Valoramos conocimientos en AWS, Docker y CI/CD.",
+      "experience_min": 6,
+      "experience_max": 20,
+      "locations": ["Madrid", "Barcelona"],
+      "expected_skills": ["Python", "FastAPI", "PostgreSQL", "Docker", "AWS"]
+    },
+    {
+      "title": "Ingeniero Frontend React",
+      "query": "Necesitamos un desarrollador frontend con experiencia en React y JavaScript moderno. Debe tener al menos 4 años de experiencia en desarrollo web responsivo. Se valorará experiencia con TypeScript, testing y herramientas de build.",
+      "experience_min": 4,
+      "experience_max": 20,
+      "locations": ["Barcelona", "Remoto"],
+      "expected_skills": ["React", "JavaScript", "CSS"]
+    },
+    {
+      "title": "Especialista DevOps",
+      "query": "Buscamos un especialista DevOps con experiencia en automatización de infraestructura. Debe dominar Kubernetes, Terraform y pipelines CI/CD. Experiencia con AWS o Azure es fundamental. Mínimo 5 años en el rol.",
+      "experience_min": 5,
+      "experience_max": 20,
+      "locations": ["Madrid", "Remoto"],
+      "expected_skills": ["Kubernetes", "Terraform", "CI/CD", "AWS"]
+    },
+    {
+      "title": "Data Scientist Junior",
+      "query": "Buscamos un data scientist junior con formación en machine learning. Debe tener experiencia con Python, pandas y scikit-learn. Valoramos proyectos en portfolio y conocimiento de estadística. Preferiblemente con experiencia en NLP o Computer Vision.",
+      "experience_min": 1,
+      "experience_max": 4,
+      "locations": ["Madrid", "Valencia"],
+      "expected_skills": ["Python", "Machine Learning", "Data Science"]
+    },
+    {
+      "title": "QA Engineer Automatización",
+      "query": "Necesitamos un QA engineer especializado en automatización de pruebas. Debe tener experiencia con Selenium, Python y herramientas de testing. Mínimo 3 años en testing automatizado. Valoramos conocimiento en CI/CD y buenas prácticas de QA.",
+      "experience_min": 3,
+      "experience_max": 10,
+      "locations": ["Bilbao"],
+      "expected_skills": ["QA Testing", "Automation Testing", "Selenium", "Python"]
+    },
+    {
+      "title": "Arquitecto de Sistemas",
+      "query": "Buscamos un arquitecto de sistemas con experiencia en diseño de arquitecturas escalables. Debe dominar patrones de microservicios, arquitectura en capas y problemas de escalabilidad. Mínimo 8 años de experiencia. Experiencia en grandes proyectos empresariales es imprescindible.",
+      "experience_min": 8,
+      "experience_max": 20,
+      "locations": ["Madrid"],
+      "expected_skills": ["System Architecture", "Microservices", "Java", "AWS"]
+    },
+    {
+      "title": "Full Stack Developer",
+      "query": "Buscamos un developer full stack capaz de trabajar tanto en frontend como en backend. Experiencia requerida en React o similar en frontend, y Python o Node.js en backend. Mínimo 5 años combinados. Ubicación remota disponible.",
+      "experience_min": 5,
+      "experience_max": 15,
+      "locations": ["Remoto"],
+      "expected_skills": ["JavaScript", "React", "Python", "Node.js"]
+    }
+  ],
+  "tips": {
+    "experience_range": "El rango de años de experiencia afecta significativamente los resultados. Sé específico.",
+    "location": "Seleccionar ubicaciones específicas mejora la precisión de la búsqueda.",
+    "semantic_query": "La consulta semántica debe ser descriptiva. Incluye roles, responsabilidades, habilidades y requisitos.",
+    "skills": "Aunque no es obligatorio, seleccionar habilidades técnicas mejora el matching.",
+    "results": "Los resultados se ordenan automáticamente por relevancia (score más alto primero)."
+  }
+}
