@@ -55,7 +55,6 @@ logs/
 .env.*.local
 
 # Docker
-.dockerignore
 docker-compose.override.yml
 
 # Archivos temporales

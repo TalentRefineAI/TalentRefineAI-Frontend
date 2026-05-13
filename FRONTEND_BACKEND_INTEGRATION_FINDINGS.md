@@ -164,6 +164,10 @@ Cuando la imagen se ejecute fuera de un Compose que sobrescriba el healthcheck, 
 
 El healthcheck del Dockerfile debe usar una herramienta disponible en la imagen final, por ejemplo `python -c` con `urllib.request`, o instalar `curl` tambien en la etapa `production`. Usar Python reduce paquetes del sistema y mantiene la imagen mas pequena.
 
+**Estado DO-02**
+
+Corregido en la optimizacion Docker: el healthcheck del Dockerfile pasa a usar `python -c` con `urllib.request`, que esta disponible en la imagen final. Tambien se evita copiar el repositorio completo a la imagen y se limita el runtime a los archivos necesarios de Streamlit.
+
 ## Recomendacion de implementacion futura
 
 Implementar estos cambios en un commit separado del backend, con el siguiente alcance:

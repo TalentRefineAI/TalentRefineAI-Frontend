@@ -3,7 +3,7 @@
 # Ejecutar: docker run -p 8501:8501 rag-hr-frontend:latest
 
 # Etapa base: Python 3.10 slim
-FROM python:3.10-slim as base
+FROM python:3.10-slim AS base
 
 # Metadatos
 LABEL maintainer="DevOps Team"
@@ -23,7 +23,7 @@ WORKDIR /app
 # ============================================================================
 # Etapa de construcción: Instalar dependencias
 # ============================================================================
-FROM base as builder
+FROM base AS builder
 
 # Instalar dependencias del sistema necesarias
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -37,13 +37,13 @@ COPY requirements.txt .
 # Crear virtualenv y instalar dependencias
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-RUN pip install --upgrade pip setuptools wheel && \
+RUN pip install --upgrade pip setuptools && \
     pip install -r requirements.txt
 
 # ============================================================================
 # Etapa final: Imagen de producción
 # ============================================================================
-FROM base as production
+FROM base AS production
 
 # Copiar virtualenv desde builder
 COPY --from=builder /opt/venv /opt/venv
@@ -58,12 +58,15 @@ RUN useradd -m -u 1000 streamlit && \
 # Cambiar al usuario no-root
 USER streamlit
 
-# Copiar código fuente
-COPY --chown=streamlit:streamlit . .
+# Copiar solo el código necesario para ejecutar Streamlit
+COPY --chown=streamlit:streamlit app.py .
+COPY --chown=streamlit:streamlit components ./components
+COPY --chown=streamlit:streamlit utils ./utils
+COPY --chown=streamlit:streamlit test_queries.json .
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8501/_stcore/health || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=5)" || exit 1
 
 # Configuración de Streamlit
 RUN mkdir -p ~/.streamlit && \
