@@ -143,6 +143,27 @@ Aunque la busqueda real respondiera correctamente, la UI podria mostrar valores 
 
 El cliente frontend debe transformar la respuesta real al formato que ya consume la UI. Esto reduce el alcance del cambio: no obliga a reescribir las tarjetas visuales y mantiene separada la adaptacion de contrato en una capa de cliente.
 
+## 7. El healthcheck del Dockerfile usa `curl`, pero la imagen final no lo instala
+
+**Problema detectado**
+
+El `Dockerfile` instala `curl` en la etapa `builder`, pero la etapa final `production` parte de `base` y solo copia el virtualenv desde `builder`. Por tanto, `curl` no queda garantizado en la imagen runtime.
+
+El propio `Dockerfile` declara:
+
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8501/_stcore/health || exit 1
+```
+
+**Impacto**
+
+Cuando la imagen se ejecute fuera de un Compose que sobrescriba el healthcheck, Docker o Azure podrian marcar el contenedor como unhealthy aunque Streamlit este funcionando correctamente, simplemente porque el binario `curl` no existe en runtime.
+
+**Cambio justificado**
+
+El healthcheck del Dockerfile debe usar una herramienta disponible en la imagen final, por ejemplo `python -c` con `urllib.request`, o instalar `curl` tambien en la etapa `production`. Usar Python reduce paquetes del sistema y mantiene la imagen mas pequena.
+
 ## Recomendacion de implementacion futura
 
 Implementar estos cambios en un commit separado del backend, con el siguiente alcance:
