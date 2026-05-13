@@ -168,6 +168,20 @@ El healthcheck del Dockerfile debe usar una herramienta disponible en la imagen 
 
 Corregido en la optimizacion Docker: el healthcheck del Dockerfile pasa a usar `python -c` con `urllib.request`, que esta disponible en la imagen final. Tambien se evita copiar el repositorio completo a la imagen y se limita el runtime a los archivos necesarios de Streamlit.
 
+## 8. La plantilla frontend menciona `OPENAI_API_KEY`
+
+**Problema detectado**
+
+El archivo `.env.example` del frontend incluye una seccion futura de LLM con `OPENAI_API_KEY=sk-...`.
+
+**Impacto**
+
+En la arquitectura actual, el frontend no deberia recibir claves de OpenAI ni Azure OpenAI. Exponer o documentar una API key en la capa Streamlit aumenta el riesgo de filtrado, dificulta la rotacion centralizada de secretos y se aleja del modelo Azure previsto, donde el backend accede a Key Vault mediante identidad gestionada o `az login` local.
+
+**Cambio justificado**
+
+La configuracion LLM debe mantenerse en backend. El frontend deberia limitarse a URLs de servicio, flags de UI y configuracion no secreta. Cuando se aborde este cambio, conviene eliminar esa referencia de la plantilla o sustituirla por una nota que indique que las credenciales LLM se gestionan exclusivamente en backend/Key Vault.
+
 ## Recomendacion de implementacion futura
 
 Implementar estos cambios en un commit separado del backend, con el siguiente alcance:
