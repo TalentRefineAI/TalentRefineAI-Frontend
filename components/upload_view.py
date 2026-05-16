@@ -16,7 +16,7 @@ def render_upload_view():
     - Barra de progreso por documento
     - Estados: pendiente, procesando, completado
     """
-    st.header("📄 Gestión de CVs")
+    st.header("Gestión de CVs")
     st.markdown(
         "Sube uno o múltiples CVs en formato PDF. El sistema los procesará "
         "automáticamente para indexarlos en el motor RAG."
@@ -42,7 +42,7 @@ def render_upload_view():
     
     with col2:
         st.info(
-            "ℹ️ **Formatos aceptados:**\n"
+            "**Formatos aceptados:**\n"
             "- PDF\n\n"
             "**Tamaño máximo:**\n"
             "- 25 MB"
@@ -75,16 +75,16 @@ def render_upload_view():
                 col1, col2 = st.columns([4, 1])
                 
                 with col1:
-                    st.markdown(f"**📎 {file_name}**")
+                    st.markdown(f"**{file_name}**")
                     st.markdown(f"*Tamaño: {uploaded_file.size / 1024 / 1024:.2f} MB*")
                 with col2:
                     file_status = st.session_state.processing_files[file_name]["status"]
                     if file_status == "pending":
-                        status_badge = "🔵 Pendiente"
+                        status_badge = "[Pendiente]"
                     elif file_status == "processing":
-                        status_badge = "🟡 Procesando"
+                        status_badge = "[Procesando]"
                     else:  # completed
-                        status_badge = "🟢 Completado"
+                        status_badge = "[Completado]"
                     
                     st.markdown(f"**{status_badge}**")
                 
@@ -95,18 +95,18 @@ def render_upload_view():
                 # Error message si existe
                 error = st.session_state.processing_files[file_name].get("error")
                 if error:
-                    st.error(f"❌ Error: {error}")
+                    st.error(f"Error: {error}")
         
         # Botón para iniciar el procesamiento
         st.divider()
         col1, col2, col3 = st.columns([1, 1, 2])
         
         with col1:
-            if st.button("🚀 Procesar CVs", use_container_width=True):
+            if st.button("Procesar CVs", use_container_width=True):
                 _process_files(uploaded_files)
         
         with col2:
-            if st.button("🔄 Limpiar", use_container_width=True):
+            if st.button("Limpiar", use_container_width=True):
                 st.session_state.processing_files = {}
                 st.rerun()
         
@@ -117,7 +117,7 @@ def render_upload_view():
     else:
         # Mostrar mensaje cuando no hay archivos
         st.info(
-            "📁 **No hay archivos cargados**\n\n"
+            "**No hay archivos cargados**\n\n"
             "Sube tus CVs en formato PDF para comenzar el análisis. "
             "El sistema extraerá información relevante y la indexará automáticamente."
         )
@@ -159,7 +159,7 @@ def _process_files(uploaded_files: List):
     
     # Mensaje final
     status_placeholder.success(
-        f"✅ ¡Procesamiento completado! Se han indexado {total_files} CVs exitosamente."
+        f"Procesamiento completado. Se han indexado {total_files} CVs exitosamente."
     )
 
 
@@ -179,13 +179,13 @@ def _render_upload_statistics():
     pending = len([f for f in files_status.values() if f["status"] == "pending"])
     
     with col1:
-        st.metric("📊 Total", total)
+        st.metric("Total", total)
     
     with col2:
-        st.metric("🟢 Completados", completed)
+        st.metric("Completados", completed)
     
     with col3:
-        st.metric("🟡 Procesando", processing)
+        st.metric("Procesando", processing)
     
     with col4:
-        st.metric("🔵 Pendientes", pending)
+        st.metric("Pendientes", pending)

@@ -17,12 +17,12 @@ def render_results_view():
     - Justificación del LLM
     - Detalles expandibles
     """
-    st.header("🏆 Resultados de Búsqueda")
+    st.header("Resultados de Búsqueda")
     
     # Verificar si hay una búsqueda ejecutada
     if "last_search" not in st.session_state or not st.session_state.get("last_search", {}).get("should_search"):
         st.info(
-            "📊 **No hay resultados aún**\n\n"
+            "**No hay resultados aún**\n\n"
             "Ve a la sección de 'Búsqueda' para ejecutar una consulta y obtener los candidatos recomendados."
         )
         return
@@ -48,15 +48,15 @@ def render_results_view():
     st.markdown(f"**Consulta:** _{query}_")
     
     if results.get("candidates"):
-        st.success(f"✅ Se encontraron {len(results['candidates'])} candidatos relevantes")
+        st.success(f"Se encontraron {len(results['candidates'])} candidatos relevantes")
     else:
-        st.warning("⚠️ No se encontraron candidatos con los criterios especificados")
+        st.warning("No se encontraron candidatos con los criterios especificados")
         return
     
     st.divider()
     
     # Mostrar metadatos de la búsqueda
-    with st.expander("📋 Parámetros de la Búsqueda"):
+    with st.expander("Parámetros de la Búsqueda"):
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Experiencia (años)", f"{experience_min}-{experience_max}")
@@ -73,7 +73,7 @@ def render_results_view():
     st.divider()
     
     # Renderizar tarjetas de candidatos
-    st.subheader("🎯 Candidatos Recomendados")
+    st.subheader("Candidatos Recomendados")
     
     candidates = results.get("candidates", [])
     
@@ -82,20 +82,20 @@ def render_results_view():
     
     # Mostrar opciones de exportación
     st.divider()
-    st.subheader("📤 Acciones")
+    st.subheader("Acciones")
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("📧 Enviar Invitaciones", use_container_width=True):
-            st.success("✅ Se han enviado invitaciones a los candidatos seleccionados.")
+        if st.button("Enviar Invitaciones", use_container_width=True):
+            st.success("Se han enviado invitaciones a los candidatos seleccionados.")
     
     with col2:
-        if st.button("💾 Guardar Resultados", use_container_width=True):
-            st.success("✅ Resultados guardados en tu biblioteca de búsquedas.")
+        if st.button("Guardar Resultados", use_container_width=True):
+            st.success("Resultados guardados en tu biblioteca de búsquedas.")
     
     with col3:
-        if st.button("📊 Generar Reporte", use_container_width=True):
-            st.success("✅ Reporte generado. Descárgalo en tu escritorio.")
+        if st.button("Generar Reporte", use_container_width=True):
+            st.success("Reporte generado. Descárgalo en tu escritorio.")
 
 
 def _render_candidate_card(candidate: Dict[str, Any], position: int):
@@ -122,7 +122,7 @@ def _render_candidate_card(candidate: Dict[str, Any], position: int):
         with col3:
             # Badge de ubicación
             location = candidate.get("location", "N/A")
-            st.markdown(f"📍 {location}")
+            st.markdown(f"{location}")
         
         # Información básica en dos columnas
         col1, col2 = st.columns(2)
@@ -148,7 +148,7 @@ def _render_candidate_card(candidate: Dict[str, Any], position: int):
         st.divider()
         
         # Justificación del LLM en un expander
-        with st.expander(f"📝 Justificación del Análisis RAG"):
+        with st.expander("Justificación del Análisis RAG"):
             justification = candidate.get("llm_justification", "No disponible")
             st.markdown(justification)
         
@@ -158,19 +158,19 @@ def _render_candidate_card(candidate: Dict[str, Any], position: int):
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            if st.button("👁️ Ver CV", key=f"view_cv_{candidate.get('id')}", use_container_width=True):
-                st.info(f"📄 CV: {candidate.get('document_name', 'documento.pdf')}")
+            if st.button("Ver CV", key=f"view_cv_{candidate.get('id')}", use_container_width=True):
+                st.info(f"CV: {candidate.get('document_name', 'documento.pdf')}")
         
         with col2:
-            if st.button("📧 Contactar", key=f"contact_{candidate.get('id')}", use_container_width=True):
-                st.success(f"✅ Email enviado a {candidate.get('name')}")
+            if st.button("Contactar", key=f"contact_{candidate.get('id')}", use_container_width=True):
+                st.success(f"Email enviado a {candidate.get('name')}")
         
         with col3:
-            if st.button("⭐ Favorito", key=f"favorite_{candidate.get('id')}", use_container_width=True):
-                st.success("✅ Añadido a favoritos")
+            if st.button("Favorito", key=f"favorite_{candidate.get('id')}", use_container_width=True):
+                st.success("Añadido a favoritos")
         
         with col4:
-            if st.button("📋 Más Info", key=f"more_info_{candidate.get('id')}", use_container_width=True):
+            if st.button("Más Info", key=f"more_info_{candidate.get('id')}", use_container_width=True):
                 st.info(
                     f"**Información Completa:**\n\n"
                     f"- **ID:** {candidate.get('id')}\n"

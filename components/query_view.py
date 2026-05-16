@@ -12,12 +12,31 @@ from utils.api_client import get_api_client
 def render_query_view():
     """
     Renderiza la vista de consulta RAG con:
-    - Filtros por años de experiencia (slider)
+    - Filtros por años de experiencia mínima (slider)
     - Filtros por ubicación (multiselect)
+    - Filtros por habilidades técnicas con entrada personalizada
+    - Ejemplos de consultas útiles
     - Área de texto para consulta semántica
     - Botón de búsqueda
     """
-    st.header("🔍 Búsqueda de Candidatos")
+    # Aplicar estilos CSS
+    st.markdown("""<style>
+/* Estilos para headers */
+h1, h2, h3 { color: #0d47a1; font-weight: 600; }
+/* Estilos para containers */
+.stContainer { background-color: #f8f9fa; border-radius: 8px; padding: 1rem; }
+/* Estilos para botones */
+.stButton > button { border-radius: 6px; font-weight: 500; transition: all 0.3s ease; }
+.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+/* Estilos para expanders */
+.streamlit-expander { background-color: #ffffff; border-radius: 6px; }
+/* Estilos para métricos */
+[data-testid="stMetricValue"] { color: #0d47a1; font-weight: 700; }
+/* Footer centrado */
+.footer { text-align: center; padding: 20px; margin-top: 40px; border-top: 1px solid #e0e0e0; color: #666; }
+</style>""", unsafe_allow_html=True)
+    
+    st.header("Búsqueda de Candidatos")
     st.markdown(
         "Utiliza el formulario a continuación para buscar candidatos ideales "
         "usando consultas semánticas y filtros específicos."
@@ -29,25 +48,15 @@ def render_query_view():
     with st.form(key="search_form"):
         st.subheader("Criterios de Búsqueda")
         
-        # Fila 1: Años de experiencia
-        col1, col2 = st.columns(2)
-        with col1:
-            experience_min = st.slider(
-                "Experiencia Mínima (años)",
-                min_value=0,
-                max_value=20,
-                value=0,
-                step=1
-            )
-        
-        with col2:
-            experience_max = st.slider(
-                "Experiencia Máxima (años)",
-                min_value=0,
-                max_value=30,
-                value=20,
-                step=1
-            )
+        # Fila 1: Años de experiencia mínima
+        experience_min = st.slider(
+            "Experiencia Mínima (años)",
+            min_value=0,
+            max_value=20,
+            value=0,
+            step=1,
+            help="Especifica el mínimo de años de experiencia requeridos."
+        )
         
         # Fila 2: Ubicación
         api_client = get_api_client()
@@ -60,16 +69,53 @@ def render_query_view():
             help="Selecciona una o más ubicaciones. Dejar vacío para todas."
         )
         
-        # Fila 3: Habilidades técnicas
+        # Fila 3: Habilidades técnicas con opción de entrada personalizada
+        api_client = get_api_client()
         available_skills = api_client.get_available_skills()
-        selected_skills = st.multiselect(
-            "Habilidades Requeridas",
-            options=available_skills,
-            default=[],
-            help="Selecciona las habilidades técnicas que buscas."
+        
+        # Crear lista mutable para añadir habilidades personalizadas
+        skills_list = list(available_skills) if available_skills else []
+        
+        # Sublínea para entrada de habilidad personalizada
+        st.markdown("**Habilidades Requeridas:**")
+        custom_skill = st.text_input(
+            "Escriba una habilidad personalizada (opcional):",
+            placeholder="Ej: Scala, Go, Rust, Kubernetes, etc.",
+            key="custom_skill_input",
+            help="Ingresa una habilidad que no esté en la lista predefinida para añadirla."
         )
         
-        # Fila 4: Consulta semántica
+        # Añadir la habilidad personalizada a la lista si se proporcionó
+        if custom_skill and custom_skill.strip():
+            if custom_skill.strip() not in skills_list:
+                skills_list.append(custom_skill.strip())
+        
+        # Multiselect para seleccionar habilidades (predefinidas + personalizadas)
+        selected_skills = st.multiselect(
+            "Selecciona de la lista:",
+            options=skills_list,
+            default=[],
+            help="Elige las habilidades técnicas que buscas. La habilidad personalizada que ingresaste estará disponible arriba."
+        )
+        
+        # Fila 4: Ejemplos de consultas útiles
+        st.divider()
+        with st.expander("Ver ejemplos de consultas"):
+            st.markdown("""
+            **Desarrollador Backend:**
+            > "Necesitamos un desarrollador backend con experiencia en Python, FastAPI y bases de datos PostgreSQL. 
+            > Debe tener al menos 5 años de experiencia y preferiblemente conocimiento en AWS."
+            
+            **Ingeniero DevOps:**
+            > "Buscamos un especialista DevOps con experiencia en Kubernetes, Terraform e infraestructura cloud. 
+            > Debe estar familiarizado con CI/CD pipelines usando Jenkins o GitLab CI."
+            
+            **Data Scientist:**
+            > "Necesitamos un data scientist con experiencia en machine learning, Python y análisis estadístico. 
+            > Preferiblemente con experiencia en proyectos de NLP o Computer Vision."
+            """)
+        
+        # Fila 5: Consulta semántica
         st.divider()
         semantic_query = st.text_area(
             "Consulta Semántica",
@@ -84,56 +130,36 @@ def render_query_view():
         col1, col2, col3 = st.columns([1, 1, 2])
         with col1:
             search_button = st.form_submit_button(
-                "🔍 Buscar",
+                "Buscar",
                 use_container_width=True,
                 type="primary"
             )
         
         with col2:
             clear_button = st.form_submit_button(
-                "🔄 Limpiar",
+                "Limpiar",
                 use_container_width=True
             )
     
     # Validar y ejecutar búsqueda
     if search_button:
         if not semantic_query.strip():
-            st.error("⚠️ Por favor, ingresa una consulta semántica.")
-            return
-        
-        if experience_min > experience_max:
-            st.error("⚠️ La experiencia mínima no puede ser mayor que la máxima.")
+            st.error("Por favor, ingresa una consulta semántica.")
             return
         
         # Guardar en session state para que results_view pueda acceder
         st.session_state.last_search = {
             "query": semantic_query,
             "experience_min": experience_min,
-            "experience_max": experience_max,
+            "experience_max": 20,
             "locations": selected_locations if selected_locations else None,
             "skills": selected_skills if selected_skills else None,
             "should_search": True
         }
         
-        st.success("✅ Búsqueda ejecutada. Ve a la sección de Resultados para ver los candidatos.")
+        st.success("Búsqueda ejecutada. Ve a la sección de Resultados para ver los candidatos.")
     
     if clear_button:
         if "last_search" in st.session_state:
             del st.session_state.last_search
         st.rerun()
-    
-    # Mostrar ejemplos de búsquedas útiles
-    with st.expander("💡 Ejemplos de Consultas"):
-        st.markdown("""
-        **Desarrollador Backend:**
-        > "Necesitamos un desarrollador backend con experiencia en Python, FastAPI y bases de datos PostgreSQL. 
-        > Debe tener al menos 5 años de experiencia y preferiblemente conocimiento en AWS."
-        
-        **Ingeniero DevOps:**
-        > "Buscamos un especialista DevOps con experiencia en Kubernetes, Terraform e infraestructura cloud. 
-        > Debe estar familiarizado con CI/CD pipelines usando Jenkins o GitLab CI."
-        
-        **Data Scientist:**
-        > "Necesitamos un data scientist con experiencia en machine learning, Python y análisis estadístico. 
-        > Preferiblemente con experiencia en proyectos de NLP o Computer Vision."
-        """)

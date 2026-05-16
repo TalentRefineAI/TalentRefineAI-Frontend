@@ -234,13 +234,6 @@ pip install -r requirements.txt
 ## 🚀 Próximos Pasos (Fase 2)
 
 - [ ] Integración con API FastAPI real
-- [ ] Autenticación y gestión de usuarios
-- [ ] Base de datos para persistencia
-- [ ] Procesamiento real de CVs (OCR, extracción)
-- [ ] Caché y optimizaciones
-- [ ] Logging y monitoreo
-- [ ] Tests automatizados
-- [ ] CI/CD pipeline
 
 ## 👨‍💻 Contribuyentes
 
