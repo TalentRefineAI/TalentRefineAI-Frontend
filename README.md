@@ -98,7 +98,65 @@ docker-compose up
 # Acceder en http://localhost:8501
 ```
 
-## 📚 Funcionalidades Implementadas
+## � Despliegue en Azure Container Apps
+
+El proyecto ya incluye un script de despliegue: `deploy-azure-containerapp.sh`.
+
+### 1) Preparar variables
+Edita o exporta las variables siguientes antes de ejecutar el script:
+
+```bash
+export ACR_NAME=<NOMBRE_ACR>
+export RESOURCE_GROUP=<GRUPO_RECURSOS>
+export LOCATION=<REGION>
+export CONTAINERAPP_ENV=<NOMBRE_ENTORNO_CONTAINERAPPS>
+export APP_NAME=<NOMBRE_CONTAINER_APP>
+export SUBSCRIPTION_ID=<SUBSCRIPTION_ID>
+export IMAGE_TAG=latest
+```
+
+Opcionalmente, para inyección segura de secretos mediante Key Vault:
+
+```bash
+export MANAGED_IDENTITY_NAME=<NOMBRE_IDENTIDAD>
+export KEY_VAULT_NAME=<NOMBRE_KEY_VAULT>
+export VAULT_SECRET_NAME=<NOMBRE_SECRETO_EN_KEYVAULT>
+export CONTAINER_APP_SECRET_NAME=<NOMBRE_SECRET_CONTAINERAPP>
+```
+
+### 2) Ejecutar el despliegue
+
+```bash
+cd /home/juakijs/RAG-HR-Frontend
+./deploy-azure-containerapp.sh
+```
+
+### 3) Qué hace el script
+
+- Construye localmente la imagen Docker con el `Dockerfile` del proyecto.
+- Se autentica en Azure y selecciona la suscripción indicada.
+- Hace login en Azure Container Registry (ACR).
+- Taggea y publica la imagen en ACR.
+- Crea o actualiza el grupo de recursos.
+- Crea o actualiza el entorno de Azure Container Apps.
+- Crea o actualiza la Container App con la imagen publicada.
+- (Opcional) Registra un secreto desde Key Vault en la Container App.
+
+### 4) Variables de entorno y secreto en Azure
+
+- Para variables de configuración simples, usa `az containerapp update --env-vars` o configura directamente en Azure Portal.
+- Para secretos sensibles, guarda los valores en Azure Key Vault y expónlos mediante Managed Identity.
+- El script incluye una guía básica para Key Vault y Managed Identity.
+
+### 5) Acceder a la aplicación desplegada
+
+Después del despliegue, obtén la URL con:
+
+```bash
+az containerapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv
+```
+
+## �📚 Funcionalidades Implementadas
 
 ### FE-01: Configuración Base ✅
 - ✓ Inicialización de Streamlit con tema personalizado

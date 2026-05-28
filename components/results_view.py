@@ -19,16 +19,16 @@ def render_results_view():
     """
     st.header("Resultados de Búsqueda")
     
-    # Verificar si hay una búsqueda ejecutada
-    if "last_search" not in st.session_state or not st.session_state.get("last_search", {}).get("should_search"):
+    # Verificar si hay una búsqueda ejecutada y si el estado es un diccionario válido
+    last_search = st.session_state.get("last_search")
+    if not isinstance(last_search, dict) or not last_search.get("should_search"):
         st.info(
-            "**No hay resultados aún**\n\n"
-            "Ve a la sección de 'Búsqueda' para ejecutar una consulta y obtener los candidatos recomendados."
+            "Por favor, introduce una búsqueda en la sección correspondiente para ver los resultados."
         )
         return
     
     # Obtener parámetros de la búsqueda anterior
-    search_params = st.session_state.last_search
+    search_params = last_search
     query = search_params.get("query", "")
     experience_min = search_params.get("experience_min", 0)
     experience_max = search_params.get("experience_max", 20)
