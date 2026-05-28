@@ -36,7 +36,7 @@ def render_results_view():
     skills = search_params.get("skills")
     
     # Llamar a la API para obtener resultados
-    api_client = get_api_client(use_mock=True)
+    api_client = get_api_client()
     results = api_client.query_rag(
         query=query,
         experience_min=experience_min,
@@ -61,11 +61,11 @@ def render_results_view():
         with col1:
             st.metric("Experiencia (años)", f"{experience_min}-{experience_max}")
         with col2:
-            locations_text = ", ".join(locations) if locations else "Todas"
+            locations_text = ", ".join(locations) if locations and isinstance(locations, (list, tuple)) else "Todas"
             st.write(f"**Ubicaciones:** {locations_text}")
         with col3:
-            skills_text = len(skills) if skills else 0
-            st.write(f"**Habilidades filtradas:** {skills_text}")
+            skills_count = len(skills) if skills and isinstance(skills, (list, tuple)) else 0
+            st.write(f"**Habilidades filtradas:** {skills_count}")
         with col4:
             processing_time = results.get("metadata", {}).get("processing_time_ms", 0)
             st.write(f"**Tiempo de búsqueda:** {processing_time}ms")

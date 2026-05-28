@@ -8,6 +8,8 @@ import streamlit as st
 from typing import List
 import time
 
+from utils.api_client import get_api_client
+
 
 def render_upload_view():
     """
@@ -125,42 +127,63 @@ def render_upload_view():
 
 def _process_files(uploaded_files: List):
     """
-    Simula el procesamiento de archivos con progreso.
+    Procesa los archivos subidos y envía la información al servicio de ingesta.
     
     Args:
         uploaded_files: Lista de archivos subidos
     """
-    # Mostrar un placeholder para la barra de progreso general
     progress_placeholder = st.empty()
     status_placeholder = st.empty()
-    
     total_files = len(uploaded_files)
-    
-    # Procesar cada archivo
-    for idx, uploaded_file in enumerate(uploaded_files):
+
+    api_client = get_api_client()
+    file_contents = [uploaded_file.read() for uploaded_file in uploaded_files]
+    file_names = [uploaded_file.name for uploaded_file in uploaded_files]
+
+    response = api_client.upload_cv_documents(file_contents, file_names)
+    document_ids = response.get("document_ids", [])
+    upload_message = response.get("message", "Carga completada.")
+
+    if not document_ids:
+        for uploaded_file in uploaded_files:
+            file_name = uploaded_file.name
+            st.session_state.processing_files[file_name]["status"] = "error"
+            st.session_state.processing_files[file_name]["progress"] = 0
+            st.session_state.processing_files[file_name]["error"] = upload_message
+
+        progress_placeholder.error(upload_message)
+        return
+
+    for idx, (uploaded_file, doc_id) in enumerate(zip(uploaded_files, document_ids)):
         file_name = uploaded_file.name
-        
-        # Simular tres fases: 0% -> 50% -> 100%
-        for progress in [0, 30, 60, 100]:
-            st.session_state.processing_files[file_name]["progress"] = progress
-            
-            if progress < 100:
-                st.session_state.processing_files[file_name]["status"] = "processing"
-            else:
-                st.session_state.processing_files[file_name]["status"] = "completed"
-            
-            # Actualizar la UI
-            progress_placeholder.progress(
-                ((idx + progress / 100) / total_files),
-                text=f"Procesando archivo {idx + 1} de {total_files}..."
-            )
-            
-            time.sleep(0.3)  # Simular tiempo de procesamiento
-    
-    # Mensaje final
-    status_placeholder.success(
-        f"Procesamiento completado. Se han indexado {total_files} CVs exitosamente."
-    )
+        st.session_state.processing_files[file_name]["status"] = "processing"
+        st.session_state.processing_files[file_name]["progress"] = 10
+
+        progress_placeholder.progress(
+            ((idx + 0.1) / total_files),
+            text=f"Iniciando procesamiento de {file_name}..."
+        )
+        time.sleep(0.2)
+
+        process_result = api_client.process_document(doc_id)
+        process_success = process_result.get("status") == "success"
+        process_message = process_result.get("message", "Procesamiento completado.")
+
+        if process_success:
+            st.session_state.processing_files[file_name]["status"] = "completed"
+            st.session_state.processing_files[file_name]["progress"] = 100
+        else:
+            st.session_state.processing_files[file_name]["status"] = "error"
+            st.session_state.processing_files[file_name]["progress"] = 0
+            st.session_state.processing_files[file_name]["error"] = process_message
+
+        progress_placeholder.progress(
+            ((idx + 1) / total_files),
+            text=f"Procesando archivo {idx + 1} de {total_files}..."
+        )
+        time.sleep(0.2)
+
+    status_placeholder.success("Procesamiento completado para todos los documentos.")
 
 
 def _render_upload_statistics():

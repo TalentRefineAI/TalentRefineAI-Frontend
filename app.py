@@ -69,7 +69,14 @@ h1, h2, h3 { color: #0d47a1; font-weight: 600; }
 def _initialize_session_state():
     """Inicializa las variables de sesión necesarias."""
     if "last_search" not in st.session_state:
-        st.session_state.last_search = None
+        st.session_state.last_search = {
+            "query": "",
+            "experience_min": 0,
+            "experience_max": 20,
+            "locations": None,
+            "skills": None,
+            "should_search": False
+        }
     
     if "processing_files" not in st.session_state:
         st.session_state.processing_files = {}
