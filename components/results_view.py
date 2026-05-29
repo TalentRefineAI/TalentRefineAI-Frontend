@@ -106,7 +106,7 @@ def _render_candidate_card(candidate: Dict[str, Any], position: int):
         candidate (Dict[str, Any]): Datos del candidato
         position (int): Posición en el ranking
     """
-    with st.container(border=True):
+    with st.container():
         # Encabezado con ranking
         col1, col2, col3 = st.columns([3, 1, 1])
         

@@ -73,7 +73,7 @@ def render_upload_view():
                 }
             
             # Crear contenedor para cada archivo
-            with st.container(border=True):
+            with st.container():
                 col1, col2 = st.columns([4, 1])
                 
                 with col1:
