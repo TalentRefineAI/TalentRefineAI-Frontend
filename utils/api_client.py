@@ -170,7 +170,19 @@ class RAGAPIClient:
                 "candidates": [],
             }
 
-    def get_candidate_details(self, candidate_id: str) -> Dict[str, Any]:
+    def download_cv(self, doc_id: str, filename: str) -> bytes | None:
+        """Descarga los bytes del PDF de un candidato via ingest-service."""
+        if self.use_mock or not doc_id or not filename:
+            return None
+        try:
+            url = f"{self.ingest_base_url}/upload/{doc_id}/download"
+            response = self.session.get(url, params={"filename": filename}, timeout=self.timeout)
+            response.raise_for_status()
+            return response.content
+        except requests.exceptions.RequestException:
+            return None
+
+        def get_candidate_details(self, candidate_id: str) -> Dict[str, Any]:
         """Detalle de candidato. Backend no expone este endpoint; usa mock."""
         candidates = get_mock_candidates()
         for candidate in candidates:

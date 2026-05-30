@@ -84,6 +84,9 @@ def _initialize_session_state():
     if "favorite_candidates" not in st.session_state:
         st.session_state.favorite_candidates = []
 
+    if "nav_page" not in st.session_state:
+        st.session_state.nav_page = "Subida de CVs"
+
 
 def _render_sidebar():
     """Crea la navegación en la barra lateral."""
@@ -95,9 +98,15 @@ def _render_sidebar():
         
         # Navegación principal
         st.markdown("### Navegación")
+        has_results = st.session_state.get("last_search", {}).get("should_search", False)
+        nav_options = ["Subida de CVs", "Búsqueda", "Resultados"] if has_results else ["Subida de CVs", "Búsqueda"]
+        # Guard: if nav_page points to Resultados but no search has been done, reset
+        if not has_results and st.session_state.get("nav_page") == "Resultados":
+            st.session_state.nav_page = "Búsqueda"
         current_page = st.radio(
             label="Selecciona una sección:",
-            options=["Subida de CVs", "Búsqueda", "Resultados"],
+            options=nav_options,
+            key="nav_page",
             label_visibility="collapsed"
         )
         

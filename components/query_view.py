@@ -156,8 +156,9 @@ h1, h2, h3 { color: #0d47a1; font-weight: 600; }
             "skills": selected_skills if selected_skills else None,
             "should_search": True
         }
-        
-        st.success("Búsqueda ejecutada. Ve a la sección de Resultados para ver los candidatos.")
+        # Navegar automaticamente a la vista de Resultados
+        st.session_state.nav_page = "Resultados"
+        st.rerun()
     
     if clear_button:
         if "last_search" in st.session_state:

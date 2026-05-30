@@ -129,11 +129,28 @@ def _render_candidate_card(candidate: Dict[str, Any], position: int):
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
+            cv_bytes_key = f"_cv_bytes_{cid}"
             if st.button("Ver CV", key=f"view_cv_{cid}", use_container_width=True):
-                st.session_state[f"_show_cv_{cid}"] = not st.session_state.get(f"_show_cv_{cid}", False)
-            if st.session_state.get(f"_show_cv_{cid}"):
-                doc = candidate.get("document_name") or "N/A"
-                st.info("**Documento:** " + doc + "\n\n**ID:** " + cid)
+                filename = candidate.get("document_name", "")
+                if filename and cid:
+                    with st.spinner("Cargando CV..."):
+                        _api = get_api_client()
+                        pdf_bytes = _api.download_cv(cid, filename)
+                    st.session_state[cv_bytes_key] = pdf_bytes
+                else:
+                    st.session_state[cv_bytes_key] = None
+            if st.session_state.get(cv_bytes_key):
+                dl_name = candidate.get("document_name") or f"{cid}.pdf"
+                st.download_button(
+                    label="Descargar PDF",
+                    data=st.session_state[cv_bytes_key],
+                    file_name=dl_name,
+                    mime="application/pdf",
+                    key=f"dl_pdf_{cid}",
+                    use_container_width=True,
+                )
+            elif cv_bytes_key in st.session_state and st.session_state[cv_bytes_key] is None:
+                st.error("No se pudo cargar el CV")
 
         with col2:
             if st.button("Contactar", key=f"contact_{cid}", use_container_width=True):
