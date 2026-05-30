@@ -64,7 +64,7 @@ class RAGAPIClient:
         process_base_url: Optional[str] = None,
         rag_base_url: Optional[str] = None,
         use_mock: bool = True,
-        timeout: int = 30
+        timeout: int = 120
     ):
         self.ingest_base_url = ingest_base_url.rstrip("/")
         self.process_base_url = (process_base_url or ingest_base_url).rstrip("/")
@@ -248,7 +248,7 @@ def get_api_client(
     ingest_base_url = ingest_base_url or os.getenv("INGEST_API_URL", default_url)
     process_base_url = process_base_url or os.getenv("PROCESS_API_URL", default_url)
     rag_base_url = rag_base_url or os.getenv("RAG_API_URL", default_url)
-    timeout = timeout if timeout is not None else _parse_int_env("API_TIMEOUT", 30)
+    timeout = timeout if timeout is not None else _parse_int_env("API_TIMEOUT", 120)
 
     return RAGAPIClient(
         ingest_base_url=ingest_base_url,

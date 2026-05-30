@@ -40,10 +40,14 @@ def render_results_view():
 
     st.markdown(f"**Consulta:** _{query}_")
 
+    if results.get("status") == "error":
+        st.error(f"Error al conectar con el servicio RAG: {results.get('message', 'Error desconocido')}")
+        st.info("Comprueba que los servicios backend estan activos.")
+        return
     if results.get("candidates"):
         st.success(f"Se encontraron {len(results['candidates'])} candidatos relevantes")
     else:
-        st.warning("No se encontraron candidatos con los criterios especificados")
+        st.warning("No se encontraron candidatos con los criterios especificados. Intenta una consulta diferente o sube mas CVs.")
         return
 
     st.divider()
