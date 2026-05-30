@@ -129,9 +129,7 @@ def _render_candidate_card(candidate: Dict[str, Any], position: int):
                 st.session_state[f"_show_cv_{cid}"] = not st.session_state.get(f"_show_cv_{cid}", False)
             if st.session_state.get(f"_show_cv_{cid}"):
                 doc = candidate.get("document_name") or "N/A"
-                st.info(f"**Documento:** {doc}
-
-**ID:** `{cid}`")
+                st.info("**Documento:** " + doc + "\n\n**ID:** " + cid)
 
         with col2:
             if st.button("Contactar", key=f"contact_{cid}", use_container_width=True):
@@ -151,24 +149,16 @@ def _render_candidate_card(candidate: Dict[str, Any], position: int):
             if st.button("Mas Info", key=f"more_info_{cid}", use_container_width=True):
                 st.session_state[f"_show_more_{cid}"] = not st.session_state.get(f"_show_more_{cid}", False)
             if st.session_state.get(f"_show_more_{cid}"):
-                st.info(
-                    f"**Informacion Completa:**
-
-"
-                    f"- **ID:** `{cid}`
-"
-                    f"- **Documento:** {candidate.get('document_name', 'N/A')}
-"
-                    f"- **Score:** {candidate.get('match_score')}%
-"
-                    f"- **Email:** {candidate.get('email', 'N/A')}
-"
-                    f"- **Telefono:** {candidate.get('phone', 'N/A')}
-"
-                    f"- **Ubicacion:** {candidate.get('location', 'N/A')}
-"
-                    f"- **Experiencia:** {candidate.get('experience_years', 0)} anos"
-                )
+                st.info("\n".join([
+                    "**Informacion Completa:**",
+                    "- **ID:** " + cid,
+                    "- **Documento:** " + str(candidate.get("document_name", "N/A")),
+                    "- **Score:** " + str(candidate.get("match_score")) + "%",
+                    "- **Email:** " + str(candidate.get("email", "N/A")),
+                    "- **Telefono:** " + str(candidate.get("phone", "N/A")),
+                    "- **Ubicacion:** " + str(candidate.get("location", "N/A")),
+                    "- **Experiencia:** " + str(candidate.get("experience_years", 0)) + " anos",
+                ]))
 
         st.divider()
 
