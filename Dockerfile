@@ -19,6 +19,7 @@ RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip setuptools wheel \
     && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
+ARG CACHE_BUST=0
 COPY . .
 
 FROM python:3.10-slim AS runtime
