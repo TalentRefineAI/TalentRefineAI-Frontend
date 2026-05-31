@@ -29,21 +29,29 @@ def _render_candidates_modal() -> None:
                     st.session_state["_show_candidates_panel"] = False
                     st.rerun()
 
-            # Invalidar cache si hubo un upload exitoso reciente o se pide refresco manual
+            # Invalidar cache si hubo un upload exitoso reciente
             if st.session_state.pop("_candidates_needs_refresh", False):
+                st.session_state.pop("_candidates_cache", None)
+
+            # El botón se evalúa ANTES de la carga para que el click
+            # invalide la cache en la misma ejecución del script.
+            refresh_col, ts_col = st.columns([1, 3])
+            with refresh_col:
+                do_refresh = st.button("🔄 Actualizar", key="_refresh_candidates", use_container_width=True)
+            if do_refresh:
                 st.session_state.pop("_candidates_cache", None)
 
             if "_candidates_cache" not in st.session_state:
                 with st.spinner("Cargando candidatos..."):
                     api = get_api_client()
-                    st.session_state["_candidates_cache"] = api.list_candidates()
+                    data = api.list_candidates()
+                st.session_state["_candidates_cache"] = data
+                import datetime
+                st.session_state["_candidates_ts"] = datetime.datetime.now().strftime("%H:%M:%S")
 
-            # Botón de refresco manual (no recarga la página completa)
-            refresh_col, _ = st.columns([1, 4])
-            with refresh_col:
-                if st.button("🔄 Actualizar", key="_refresh_candidates", use_container_width=True):
-                    st.session_state.pop("_candidates_cache", None)
-                    st.rerun()
+            with ts_col:
+                if "_candidates_ts" in st.session_state:
+                    st.caption(f"Actualizado: {st.session_state['_candidates_ts']}")
 
             candidates = st.session_state["_candidates_cache"]
 
