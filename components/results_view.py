@@ -4,6 +4,7 @@ Renderiza tarjetas dinamicas con candidatos clasificados por relevancia.
 """
 
 import streamlit as st
+from datetime import datetime
 from typing import Dict, List, Any
 from utils.api_client import get_api_client
 
@@ -68,21 +69,26 @@ def render_results_view():
 
     st.divider()
     st.subheader("Candidatos Recomendados")
-    for idx, candidate in enumerate(results.get("candidates", []), 1):
+    candidates = results.get("candidates", [])
+    for idx, candidate in enumerate(candidates, 1):
         _render_candidate_card(candidate, idx)
 
     st.divider()
     st.subheader("Acciones")
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     with col1:
         if st.button("Enviar Invitaciones", use_container_width=True):
             st.session_state["_action_msg"] = ("success", "Se han enviado invitaciones a los candidatos seleccionados.")
     with col2:
-        if st.button("Guardar Resultados", use_container_width=True):
-            st.session_state["_action_msg"] = ("success", "Resultados guardados en tu biblioteca de busquedas.")
-    with col3:
-        if st.button("Generar Reporte", use_container_width=True):
-            st.session_state["_action_msg"] = ("success", "Reporte generado. Descargalo en tu escritorio.")
+        report_text = _generate_report(query, candidates, results.get("metadata", {}))
+        ts = datetime.now().strftime("%Y%m%d_%H%M")
+        st.download_button(
+            label="Generar Reporte",
+            data=report_text.encode("utf-8"),
+            file_name=f"reporte_candidatos_{ts}.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
 
     action = st.session_state.get("_action_msg")
     if action:
@@ -90,8 +96,50 @@ def render_results_view():
         st.success(msg) if kind == "success" else st.info(msg)
 
 
+def _generate_report(query: str, candidates: List[Dict[str, Any]], metadata: dict) -> str:
+    """Genera un informe de texto con los candidatos encontrados."""
+    lines = [
+        "=" * 60,
+        "REPORTE DE BUSQUEDA DE CANDIDATOS",
+        "=" * 60,
+        f"Fecha:    {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"Consulta: {query}",
+        f"Total candidatos encontrados: {len(candidates)}",
+        "",
+    ]
+    for i, c in enumerate(candidates, 1):
+        lines += [
+            f"{'=' * 60}",
+            f"#{i}  {c.get('name', 'N/A')}  —  Relevancia: {c.get('match_score', 0)}%",
+            f"{'=' * 60}",
+            f"  Email:        {c.get('email', 'N/A')}",
+            f"  Telefono:     {c.get('phone', 'N/A')}",
+            f"  Ubicacion:    {c.get('location', 'N/A')}",
+            f"  Experiencia:  {c.get('experience_years', 0)} anos",
+        ]
+        skills = c.get("skills", [])
+        if skills:
+            lines.append(f"  Habilidades:  {', '.join(skills)}")
+        summary = c.get("expertise_summary", "")
+        if summary:
+            lines.append(f"  Resumen:      {summary}")
+        just = c.get("llm_justification", "")
+        if just:
+            lines += [
+                "  Justificacion RAG:",
+                f"    {just}",
+            ]
+        lines.append("")
+    lines += [
+        "=" * 60,
+        "Generado por TalentRefineAI",
+        "=" * 60,
+    ]
+    return "\n".join(lines)
+
+
 def _render_candidate_card(candidate: Dict[str, Any], position: int):
-    cid = candidate.get("id") or f"pos_{position}"
+    cid = candidate.get("id") or ""
 
     with st.container():
         col1, col2, col3 = st.columns([3, 1, 1])
@@ -126,47 +174,38 @@ def _render_candidate_card(candidate: Dict[str, Any], position: int):
             st.markdown(candidate.get("llm_justification", "No disponible"))
 
         st.divider()
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
 
         with col1:
             cv_bytes_key = f"_cv_bytes_{cid}"
-            if st.button("Ver CV", key=f"view_cv_{cid}", use_container_width=True):
-                filename = candidate.get("document_name", "")
-                if filename and cid:
+            filename = candidate.get("document_name", "")
+            if cid and filename:
+                if st.button("Ver CV", key=f"view_cv_{cid}", use_container_width=True):
                     with st.spinner("Cargando CV..."):
-                        _api = get_api_client()
-                        pdf_bytes = _api.download_cv(cid, filename)
+                        pdf_bytes = get_api_client().download_cv(cid, filename)
                     st.session_state[cv_bytes_key] = pdf_bytes
-                else:
-                    st.session_state[cv_bytes_key] = None
-            if st.session_state.get(cv_bytes_key):
-                dl_name = candidate.get("document_name") or f"{cid}.pdf"
-                st.download_button(
-                    label="Descargar PDF",
-                    data=st.session_state[cv_bytes_key],
-                    file_name=dl_name,
-                    mime="application/pdf",
-                    key=f"dl_pdf_{cid}",
-                    use_container_width=True,
-                )
-            elif cv_bytes_key in st.session_state and st.session_state[cv_bytes_key] is None:
-                st.error("No se pudo cargar el CV")
+                if st.session_state.get(cv_bytes_key):
+                    dl_name = filename or f"{cid}.pdf"
+                    st.download_button(
+                        label="Descargar PDF",
+                        data=st.session_state[cv_bytes_key],
+                        file_name=dl_name,
+                        mime="application/pdf",
+                        key=f"dl_pdf_{cid}",
+                        use_container_width=True,
+                    )
+                elif cv_bytes_key in st.session_state and st.session_state[cv_bytes_key] is None:
+                    st.error("No se pudo cargar el CV")
+            else:
+                st.caption("CV no disponible")
 
         with col2:
             if st.button("Contactar", key=f"contact_{cid}", use_container_width=True):
                 st.session_state[f"_contact_{cid}"] = True
             if st.session_state.get(f"_contact_{cid}"):
-                st.success(f"Email preparado para {candidate.get('email', 'N/A')}")
+                st.success(f"Email: {candidate.get('email', 'N/A')}")
 
         with col3:
-            fav_key = f"_fav_{cid}"
-            label = "Favorito" if not st.session_state.get(fav_key) else "★ Favorito"
-            if st.button(label, key=f"favorite_{cid}", use_container_width=True):
-                st.session_state[fav_key] = not st.session_state.get(fav_key, False)
-            if st.session_state.get(fav_key):
-                st.success("Anadido a favoritos")
-
-        with col4:
             if st.button("Mas Info", key=f"more_info_{cid}", use_container_width=True):
                 st.session_state[f"_show_more_{cid}"] = not st.session_state.get(f"_show_more_{cid}", False)
             if st.session_state.get(f"_show_more_{cid}"):
