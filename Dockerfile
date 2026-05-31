@@ -20,6 +20,7 @@ RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 ARG CACHE_BUST=0
+RUN echo "cache-bust: ${CACHE_BUST}"
 COPY . .
 
 FROM python:3.10-slim AS runtime
