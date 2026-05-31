@@ -100,6 +100,10 @@ def _render_sidebar():
         st.markdown("### Navegación")
         has_results = st.session_state.get("last_search", {}).get("should_search", False)
         nav_options = ["Subida de CVs", "Búsqueda", "Resultados"] if has_results else ["Subida de CVs", "Búsqueda"]
+        # Flush any navigation request set by child components before widget creation
+        if "_nav_page_request" in st.session_state:
+            st.session_state.nav_page = st.session_state["_nav_page_request"]
+            del st.session_state["_nav_page_request"]
         # Guard: if nav_page points to Resultados but no search has been done, reset
         if not has_results and st.session_state.get("nav_page") == "Resultados":
             st.session_state.nav_page = "Búsqueda"

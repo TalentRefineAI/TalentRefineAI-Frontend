@@ -164,6 +164,14 @@ def render_upload_view():
         # Mostrar resumen de estadísticas
         st.divider()
         _render_upload_statistics()
+        # Mostrar resultado del procesamiento si existe
+        if "_process_result" in st.session_state:
+            result = st.session_state["_process_result"]
+            del st.session_state["_process_result"]
+            if result["type"] == "success":
+                st.success(result["msg"])
+            else:
+                st.error(result["msg"])
     
     else:
         # Mostrar mensaje cuando no hay archivos
@@ -182,7 +190,6 @@ def _process_files(uploaded_files: List):
         uploaded_files: Lista de archivos subidos
     """
     progress_placeholder = st.empty()
-    status_placeholder = st.empty()
     total_files = len(uploaded_files)
 
     api_client = get_api_client()
@@ -200,8 +207,8 @@ def _process_files(uploaded_files: List):
             st.session_state.processing_files[file_name]["progress"] = 0
             st.session_state.processing_files[file_name]["error"] = upload_message
 
-        progress_placeholder.error(upload_message)
-        return
+        st.session_state["_process_result"] = {"type": "error", "msg": upload_message}
+        st.rerun()
 
     for idx, (uploaded_file, doc_id) in enumerate(zip(uploaded_files, document_ids)):
         file_name = uploaded_file.name
@@ -232,7 +239,9 @@ def _process_files(uploaded_files: List):
         )
         time.sleep(0.2)
 
-    status_placeholder.success("Procesamiento completado para todos los documentos.")
+    progress_placeholder.empty()
+    st.session_state["_process_result"] = {"type": "success", "msg": "Procesamiento completado para todos los documentos."}
+    st.rerun()
 
 
 def _render_upload_statistics():
