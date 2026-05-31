@@ -19,23 +19,6 @@ def render_query_view():
     - Área de texto para consulta semántica
     - Botón de búsqueda
     """
-    # Aplicar estilos CSS
-    st.markdown("""<style>
-/* Estilos para headers */
-h1, h2, h3 { color: #0d47a1; font-weight: 600; }
-/* Estilos para containers */
-.stContainer { background-color: #f8f9fa; border-radius: 8px; padding: 1rem; }
-/* Estilos para botones */
-.stButton > button { border-radius: 6px; font-weight: 500; transition: all 0.3s ease; }
-.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
-/* Estilos para expanders */
-.streamlit-expander { background-color: #ffffff; border-radius: 6px; }
-/* Estilos para métricos */
-[data-testid="stMetricValue"] { color: #0d47a1; font-weight: 700; }
-/* Footer centrado */
-.footer { text-align: center; padding: 20px; margin-top: 40px; border-top: 1px solid #e0e0e0; color: #666; }
-</style>""", unsafe_allow_html=True)
-    
     st.header("Búsqueda de Candidatos")
     st.markdown(
         "Utiliza el formulario a continuación para buscar candidatos ideales "
@@ -70,7 +53,6 @@ h1, h2, h3 { color: #0d47a1; font-weight: 600; }
         )
         
         # Fila 3: Habilidades técnicas con opción de entrada personalizada
-        api_client = get_api_client()
         available_skills = api_client.get_available_skills()
         
         # Crear lista mutable para añadir habilidades personalizadas

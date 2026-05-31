@@ -90,7 +90,7 @@ def render_results_view():
             use_container_width=True,
         )
 
-    action = st.session_state.get("_action_msg")
+    action = st.session_state.pop("_action_msg", None)
     if action:
         kind, msg = action
         st.success(msg) if kind == "success" else st.info(msg)

@@ -4,6 +4,7 @@ Implementa un área Drag & Drop para subir múltiples archivos PDF
 y una barra de progreso que gestiona los estados de los documentos.
 """
 
+import datetime
 import streamlit as st
 from typing import List
 import time
@@ -46,7 +47,6 @@ def _render_candidates_modal() -> None:
                     api = get_api_client()
                     data = api.list_candidates()
                 st.session_state["_candidates_cache"] = data
-                import datetime
                 st.session_state["_candidates_ts"] = datetime.datetime.now().strftime("%H:%M:%S")
 
             with ts_col:

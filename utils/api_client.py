@@ -274,6 +274,9 @@ class RAGAPIClient:
         return get_available_skills()
 
 
+import streamlit as st
+
+@st.cache_resource
 def get_api_client(
     use_mock: Optional[bool] = None,
     ingest_base_url: Optional[str] = None,
