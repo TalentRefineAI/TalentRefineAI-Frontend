@@ -227,7 +227,7 @@ def render_upload_view():
         
         # Mostrar resumen de estadísticas
         st.divider()
-        _render_upload_statistics()
+        _render_upload_statistics(uploaded_files)
         # Mostrar resultado del procesamiento si existe
         if "_process_result" in st.session_state:
             result = st.session_state["_process_result"]
@@ -310,29 +310,38 @@ def _process_files(uploaded_files: List):
     st.rerun()
 
 
-def _render_upload_statistics():
+def _render_upload_statistics(uploaded_files: List) -> None:
     """
-    Renderiza las estadísticas de carga de archivos.
+    Renderiza estadísticas de los archivos actualmente en el uploader.
+    Filtra processing_files para reflejar solo los archivos visibles en pantalla.
     """
-    if not st.session_state.processing_files:
+    current_names = {uf.name for uf in uploaded_files}
+    files_status = {
+        k: v for k, v in st.session_state.processing_files.items()
+        if k in current_names
+    }
+    if not files_status:
         return
-    
+
     col1, col2, col3, col4 = st.columns(4)
-    
-    files_status = st.session_state.processing_files
+
     total = len(files_status)
-    completed = len([f for f in files_status.values() if f["status"] == "completed"])
+    indexed = len([f for f in files_status.values() if f["status"] == "completed"])
     processing = len([f for f in files_status.values() if f["status"] == "processing"])
     pending = len([f for f in files_status.values() if f["status"] == "pending"])
-    
+
     with col1:
         st.metric("Total", total)
-    
+
     with col2:
-        st.metric("Completados", completed)
-    
+        st.metric(
+            "Indexados",
+            indexed,
+            help="Documentos procesados y en cola de indexación vectorial. La indexación puede tardar 1-2 min en segundo plano.",
+        )
+
     with col3:
         st.metric("Procesando", processing)
-    
+
     with col4:
         st.metric("Pendientes", pending)
