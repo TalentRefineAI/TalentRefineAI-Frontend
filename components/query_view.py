@@ -157,7 +157,7 @@ h1, h2, h3 { color: #0d47a1; font-weight: 600; }
             "should_search": True
         }
         # Navegar automaticamente a la vista de Resultados
-        st.session_state.nav_page = "Resultados"
+        st.session_state._nav_page_request = "Resultados"
         st.rerun()
     
     if clear_button:
