@@ -11,6 +11,50 @@ import time
 from utils.api_client import get_api_client
 
 
+def _render_candidates_modal() -> None:
+    """Muestra un botón que abre/cierra el panel con candidatos indexados."""
+    col1, _ = st.columns([1, 3])
+    with col1:
+        if st.button("👥 Ver candidatos disponibles", use_container_width=True):
+            current = st.session_state.get("_show_candidates_panel", False)
+            st.session_state["_show_candidates_panel"] = not current
+            # Refresh the cached list when opening
+            if not current:
+                st.session_state.pop("_candidates_cache", None)
+
+    if st.session_state.get("_show_candidates_panel", False):
+        with st.container(border=True):
+            header_col, close_col = st.columns([5, 1])
+            with header_col:
+                st.markdown("### 📋 Candidatos indexados")
+            with close_col:
+                if st.button("✕ Cerrar", key="_close_candidates"):
+                    st.session_state["_show_candidates_panel"] = False
+                    st.rerun()
+
+            if "_candidates_cache" not in st.session_state:
+                with st.spinner("Cargando candidatos..."):
+                    api = get_api_client()
+                    st.session_state["_candidates_cache"] = api.list_candidates()
+
+            candidates = st.session_state["_candidates_cache"]
+
+            if not candidates:
+                st.info("No hay candidatos indexados todavía.")
+            else:
+                st.markdown(f"**Total: {len(candidates)} candidato(s)**")
+                st.markdown("---")
+                for c in candidates:
+                    c1, c2, c3 = st.columns([3, 3, 4])
+                    with c1:
+                        st.markdown(f"**{c.get('name', 'N/A')}**")
+                    with c2:
+                        email = c.get("email") or "—"
+                        st.markdown(email)
+                    with c3:
+                        st.caption(c.get("file_name", ""))
+
+
 def render_upload_view():
     """
     Renderiza la vista de subida de CVs con:
@@ -26,7 +70,12 @@ def render_upload_view():
     
     # Divider visual
     st.divider()
-    
+
+    # ---- Botón "Ver candidatos disponibles" ----
+    _render_candidates_modal()
+
+    st.divider()
+
     # Sección de subida de archivos
     st.subheader("Subir Documentos")
     

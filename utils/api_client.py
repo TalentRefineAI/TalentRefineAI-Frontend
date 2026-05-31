@@ -182,7 +182,39 @@ class RAGAPIClient:
         except requests.exceptions.RequestException:
             return None
 
-        def get_candidate_details(self, candidate_id: str) -> Dict[str, Any]:
+    def list_candidates(self) -> list[dict]:
+        """Obtiene todos los candidatos indexados (nombre + email) desde el RAG service."""
+        if self.use_mock:
+            return [
+                {"candidate_id": "mock-1", "name": "Ana García", "email": "ana@example.com", "file_name": "Ana_Garcia_CV.pdf"},
+                {"candidate_id": "mock-2", "name": "Carlos López", "email": "carlos@example.com", "file_name": "Carlos_Lopez_CV.pdf"},
+            ]
+        try:
+            url = f"{self.rag_base_url}/search/candidates"
+            response = self.session.get(url, timeout=self.timeout)
+            response.raise_for_status()
+            body = response.json()
+            return body.get("candidates", [])
+        except requests.exceptions.RequestException:
+            return []
+
+    def list_candidates(self) -> list[dict]:
+        """Obtiene todos los candidatos indexados (nombre + email) desde el RAG service."""
+        if self.use_mock:
+            return [
+                {"candidate_id": "mock-1", "name": "Ana García", "email": "ana@example.com", "file_name": "Ana_Garcia_CV.pdf"},
+                {"candidate_id": "mock-2", "name": "Carlos López", "email": "carlos@example.com", "file_name": "Carlos_Lopez_CV.pdf"},
+            ]
+        try:
+            url = f"{self.rag_base_url}/search/candidates"
+            response = self.session.get(url, timeout=self.timeout)
+            response.raise_for_status()
+            body = response.json()
+            return body.get("candidates", [])
+        except requests.exceptions.RequestException:
+            return []
+
+    def get_candidate_details(self, candidate_id: str) -> Dict[str, Any]:
         """Detalle de candidato. Backend no expone este endpoint; usa mock."""
         candidates = get_mock_candidates()
         for candidate in candidates:
