@@ -241,6 +241,30 @@ class RAGAPIClient:
             "document_id": doc_id,
         }
 
+    def delete_all_index(self) -> dict:
+        """Elimina toda la colección de candidatos de Qdrant via rag-service."""
+        if self.use_mock:
+            return {"deleted": True}
+        try:
+            url = f"{self.rag_base_url}/search/candidates"
+            response = self.session.delete(url, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {"deleted": False, "error": str(e)}
+
+    def delete_all_uploads(self) -> dict:
+        """Elimina todos los blobs de Blob Storage via ingest-service."""
+        if self.use_mock:
+            return {"deleted": True}
+        try:
+            url = f"{self.ingest_base_url}/upload/all"
+            response = self.session.delete(url, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {"deleted": False, "error": str(e)}
+
     def get_available_locations(self) -> List[str]:
         """Backend no expone este endpoint; retorna datos estaticos."""
         return get_available_locations()

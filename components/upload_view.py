@@ -18,9 +18,6 @@ def _render_candidates_modal() -> None:
         if st.button("👥 Ver candidatos disponibles", use_container_width=True):
             current = st.session_state.get("_show_candidates_panel", False)
             st.session_state["_show_candidates_panel"] = not current
-            # Refresh the cached list when opening
-            if not current:
-                st.session_state.pop("_candidates_cache", None)
 
     if st.session_state.get("_show_candidates_panel", False):
         with st.container(border=True):
@@ -32,10 +29,21 @@ def _render_candidates_modal() -> None:
                     st.session_state["_show_candidates_panel"] = False
                     st.rerun()
 
+            # Invalidar cache si hubo un upload exitoso reciente o se pide refresco manual
+            if st.session_state.pop("_candidates_needs_refresh", False):
+                st.session_state.pop("_candidates_cache", None)
+
             if "_candidates_cache" not in st.session_state:
                 with st.spinner("Cargando candidatos..."):
                     api = get_api_client()
                     st.session_state["_candidates_cache"] = api.list_candidates()
+
+            # Botón de refresco manual (no recarga la página completa)
+            refresh_col, _ = st.columns([1, 4])
+            with refresh_col:
+                if st.button("🔄 Actualizar", key="_refresh_candidates", use_container_width=True):
+                    st.session_state.pop("_candidates_cache", None)
+                    st.rerun()
 
             candidates = st.session_state["_candidates_cache"]
 
@@ -55,6 +63,49 @@ def _render_candidates_modal() -> None:
                         st.caption(c.get("file_name", ""))
 
 
+
+
+def _render_delete_all_section() -> None:
+    """Zona de peligro: elimina todos los candidatos de Qdrant y Blob Storage."""
+    with st.expander("⚠️ Zona de peligro", expanded=False):
+        st.warning(
+            "Esta acción **eliminará permanentemente** todos los candidatos indexados "
+            "y sus archivos PDF del almacenamiento. No se puede deshacer."
+        )
+        confirmed = st.checkbox(
+            "Confirmo que quiero eliminar TODOS los candidatos y archivos",
+            key="_delete_all_confirm",
+        )
+        if st.button(
+            "🗑️ Eliminar todo",
+            disabled=not confirmed,
+            type="primary",
+            key="_delete_all_btn",
+        ):
+            api = get_api_client()
+            idx_result = api.delete_all_index()
+            blob_result = api.delete_all_uploads()
+
+            if idx_result.get("deleted") and blob_result.get("deleted"):
+                # Limpiar estado local
+                st.session_state["processing_files"] = {}
+                st.session_state.pop("_candidates_cache", None)
+                st.session_state["_show_candidates_panel"] = False
+                st.session_state["_process_result"] = {
+                    "type": "success",
+                    "msg": "✅ Todos los candidatos han sido eliminados del índice y del almacenamiento.",
+                }
+            else:
+                errors = []
+                if not idx_result.get("deleted"):
+                    errors.append(f"Qdrant: {idx_result.get('error', 'error desconocido')}")
+                if not blob_result.get("deleted"):
+                    errors.append(f"Blob: {blob_result.get('error', 'error desconocido')}")
+                st.session_state["_process_result"] = {
+                    "type": "error",
+                    "msg": "Error al eliminar: " + "; ".join(errors),
+                }
+            st.rerun()
 def render_upload_view():
     """
     Renderiza la vista de subida de CVs con:
@@ -73,6 +124,11 @@ def render_upload_view():
 
     # ---- Botón "Ver candidatos disponibles" ----
     _render_candidates_modal()
+
+    st.divider()
+
+    # ---- Zona de peligro: Eliminar todo ----
+    _render_delete_all_section()
 
     st.divider()
 
@@ -240,6 +296,8 @@ def _process_files(uploaded_files: List):
         time.sleep(0.2)
 
     progress_placeholder.empty()
+    # Marca el panel de candidatos para refrescar en el próximo render
+    st.session_state["_candidates_needs_refresh"] = True
     st.session_state["_process_result"] = {"type": "success", "msg": "Procesamiento completado para todos los documentos."}
     st.rerun()
 
