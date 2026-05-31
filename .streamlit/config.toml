@@ -23,6 +23,3 @@ enableXsrfProtection = false
 
 [browser]
 gatherUsageStats = false
-
-[runner]
-logLevel = "info"
