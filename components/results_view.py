@@ -3,7 +3,6 @@ Componente de resultados (FE-04).
 Renderiza tarjetas dinamicas con candidatos clasificados por relevancia.
 """
 
-import time
 import streamlit as st
 from datetime import datetime
 from typing import Dict, List, Any
@@ -60,10 +59,8 @@ def render_results_view():
                 experience_max=experience_max,
                 locations=locations,
             )
-            # Reintento unico si la primera llamada devuelve vacio (robustez ante fallos transitorios)
+            # Reintento silencioso si la primera llamada devuelve vacio (fallback ante arranque en frio)
             if not results.get("candidates") and results.get("status") != "error":
-                st.write("Sin resultados en primer intento, reintentando en 2s...")
-                time.sleep(2)
                 results = api_client.query_rag(
                     query=query,
                     experience_min=experience_min,
