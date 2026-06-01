@@ -7,7 +7,6 @@ Incluye desplegables, sliders y área de texto para consultas semánticas.
 import streamlit as st
 from typing import Dict, List, Any
 from utils.api_client import get_api_client
-from components.results_view import render_results_view
 
 
 def render_query_view():
@@ -140,6 +139,8 @@ def render_query_view():
         st.session_state.pop("_results_cache_key", None)
         st.session_state.pop("_results_cache", None)
         st.session_state["_searching"] = False
+        # Navegar a la página de resultados (no-widget state → sin conflicto)
+        st.session_state["_page"] = "Resultados"
         st.rerun()
 
     if clear_button:
@@ -154,8 +155,5 @@ def render_query_view():
         st.session_state.pop("_results_cache_key", None)
         st.session_state.pop("_results_cache", None)
         st.session_state.pop("_searching", None)
+        st.session_state["_page"] = "Búsqueda"
         st.rerun()
-
-    # Mostrar resultados inline debajo del formulario
-    st.divider()
-    render_results_view()

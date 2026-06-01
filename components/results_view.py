@@ -11,6 +11,7 @@ from utils.api_client import get_api_client
 
 
 def render_results_view():
+    st.header("Resultados de Búsqueda")
     last_search = st.session_state.get("last_search")
     if not isinstance(last_search, dict) or not last_search.get("should_search"):
         return
