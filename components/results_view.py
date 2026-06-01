@@ -177,25 +177,36 @@ def _render_candidate_card(candidate: Dict[str, Any], position: int):
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            cv_bytes_key = f"_cv_bytes_{cid}"
             filename = candidate.get("document_name", "")
             if cid and filename:
-                if st.button("Ver CV", key=f"view_cv_{cid}", use_container_width=True):
-                    with st.spinner("Cargando CV..."):
+                state_key = f"_cv_state_{cid}"
+                bytes_key = f"_cv_bytes_{cid}"
+                state = st.session_state.get(state_key, "idle")
+
+                if state == "loading":
+                    with st.spinner("Preparando el enlace de descarga..."):
                         pdf_bytes = get_api_client().download_cv(cid, filename)
-                    st.session_state[cv_bytes_key] = pdf_bytes
-                if st.session_state.get(cv_bytes_key):
-                    dl_name = filename or f"{cid}.pdf"
+                    st.session_state[bytes_key] = pdf_bytes
+                    st.session_state[state_key] = "ready" if pdf_bytes else "error"
+                    st.rerun()
+                elif state == "ready":
                     st.download_button(
-                        label="Descargar PDF",
-                        data=st.session_state[cv_bytes_key],
-                        file_name=dl_name,
+                        label="📥 Haz clic para descargar el PDF",
+                        data=st.session_state[bytes_key],
+                        file_name=filename,
                         mime="application/pdf",
                         key=f"dl_pdf_{cid}",
                         use_container_width=True,
                     )
-                elif cv_bytes_key in st.session_state and st.session_state[cv_bytes_key] is None:
-                    st.error("No se pudo cargar el CV")
+                elif state == "error":
+                    st.error("No se pudo cargar el PDF")
+                    if st.button("Reintentar", key=f"retry_cv_{cid}", use_container_width=True):
+                        del st.session_state[state_key]
+                        st.rerun()
+                else:  # idle
+                    if st.button("Descargar PDF", key=f"dl_btn_{cid}", use_container_width=True):
+                        st.session_state[state_key] = "loading"
+                        st.rerun()
             else:
                 st.caption("CV no disponible")
 

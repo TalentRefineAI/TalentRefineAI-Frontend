@@ -136,6 +136,9 @@ def render_query_view():
             "skills": selected_skills if selected_skills else None,
             "should_search": True
         }
+        # Invalidar caché para forzar llamada fresca a la API en cada búsqueda
+        st.session_state.pop("_results_cache_key", None)
+        st.session_state.pop("_results_cache", None)
         # Navegar automaticamente a la vista de Resultados
         st.session_state._nav_page_request = "Resultados"
         st.rerun()
