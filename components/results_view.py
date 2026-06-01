@@ -3,6 +3,7 @@ Componente de resultados (FE-04).
 Renderiza tarjetas dinamicas con candidatos clasificados por relevancia.
 """
 
+import time
 import streamlit as st
 from datetime import datetime
 from typing import Dict, List, Any
@@ -28,20 +29,36 @@ def render_results_view():
 
     # ── FASE 1: busqueda en curso ─────────────────────────────────────────────
     # Si no hay cache, llamamos a la API y mostramos SOLO el indicador de carga.
-    # Al terminar guardamos en cache y relanzamos el render (st.rerun) para que
-    # la vista de resultados se muestre limpia, sin mezclarla con el spinner.
+    # Incluye logica de reintento: si la primera llamada devuelve 0 candidatos
+    # (posible falso negativo por cold-start del servicio), reintentamos hasta
+    # _MAX_RETRIES veces antes de aceptar el resultado vacio.
+    # Streamlit permanece en estado "running" durante toda la fase 1.
+    _MAX_RETRIES = 3
+    _RETRY_DELAY = 1.0  # segundos entre reintentos
+
     if st.session_state.get("_results_cache_key") != cache_key:
         st.markdown(f"**Consulta:** _{query}_")
         with st.status("Buscando candidatos...", expanded=True) as _status:
-            st.write("Conectando con el servicio RAG...")
             api_client = get_api_client()
-            st.write("Generando embedding de la consulta...")
-            results = api_client.query_rag(
-                query=query,
-                experience_min=experience_min,
-                experience_max=experience_max,
-                locations=locations,
-            )
+            results = None
+            for _attempt in range(1, _MAX_RETRIES + 1):
+                if _attempt == 1:
+                    st.write("Conectando con el servicio RAG y generando embedding...")
+                else:
+                    st.write(f"El servicio aún está procesando, reintentando... (intento {_attempt}/{_MAX_RETRIES})")
+                    time.sleep(_RETRY_DELAY)
+
+                results = api_client.query_rag(
+                    query=query,
+                    experience_min=experience_min,
+                    experience_max=experience_max,
+                    locations=locations,
+                )
+
+                # Parar si hay candidatos o si hay error (no reintentar errores)
+                if results.get("candidates") or results.get("status") == "error":
+                    break
+
             if results.get("status") == "error":
                 _status.update(
                     label="Error al contactar el servicio RAG",
