@@ -23,21 +23,46 @@ def render_results_view():
     locations = last_search.get("locations")
     skills = last_search.get("skills")
 
-    # Clave de cache: solo llama a la API cuando cambian los parametros
+    # Clave de cache: evita rellamar a la API si los parametros no cambiaron
     cache_key = f"{query}|{experience_min}|{experience_max}|{str(locations)}|{str(skills)}"
+
+    # ── FASE 1: busqueda en curso ─────────────────────────────────────────────
+    # Si no hay cache, llamamos a la API y mostramos SOLO el indicador de carga.
+    # Al terminar guardamos en cache y relanzamos el render (st.rerun) para que
+    # la vista de resultados se muestre limpia, sin mezclarla con el spinner.
     if st.session_state.get("_results_cache_key") != cache_key:
-        with st.spinner("Buscando candidatos..."):
+        st.markdown(f"**Consulta:** _{query}_")
+        with st.status("Buscando candidatos...", expanded=True) as _status:
+            st.write("Conectando con el servicio RAG...")
             api_client = get_api_client()
+            st.write("Generando embedding de la consulta...")
             results = api_client.query_rag(
                 query=query,
                 experience_min=experience_min,
                 experience_max=experience_max,
                 locations=locations,
             )
+            if results.get("status") == "error":
+                _status.update(
+                    label="Error al contactar el servicio RAG",
+                    state="error",
+                    expanded=True,
+                )
+            else:
+                n = len(results.get("candidates") or [])
+                _label = (
+                    f"Búsqueda completada — {n} candidato{'s' if n != 1 else ''} encontrado{'s' if n != 1 else ''}"
+                )
+                _status.update(label=_label, state="complete", expanded=False)
+
         st.session_state["_results_cache"] = results
         st.session_state["_results_cache_key"] = cache_key
-    else:
-        results = st.session_state["_results_cache"]
+        # Rerun para mostrar la vista de resultados en una pasada limpia
+        st.rerun()
+        return  # nunca se alcanza; hace explicito que nada mas se renderiza aqui
+
+    # ── FASE 2: resultados disponibles en cache ───────────────────────────────
+    results = st.session_state["_results_cache"]
 
     st.markdown(f"**Consulta:** _{query}_")
     _elapsed = results.get("metadata", {}).get("processing_time_ms", 0)
@@ -51,10 +76,7 @@ def render_results_view():
     if results.get("candidates"):
         st.success(f"Se encontraron {len(results['candidates'])} candidatos relevantes")
     else:
-        _msg = "No se encontraron candidatos con los criterios especificados. Intenta una consulta diferente o sube mas CVs."
-        if _elapsed:
-            _msg += f" (búsqueda ejecutada en {_elapsed} ms — el servicio RAG está activo)"
-        st.warning(_msg)
+        st.warning("No se encontraron candidatos con los criterios especificados. Intenta una consulta diferente o sube mas CVs.")
         return
 
     st.divider()
