@@ -135,10 +135,9 @@ def render_query_view():
             "skills": selected_skills if selected_skills else None,
             "should_search": True,
         }
-        # Invalidar caché y reiniciar máquina de estados
+        # Invalidar caché para forzar nueva búsqueda
         st.session_state.pop("_results_cache_key", None)
         st.session_state.pop("_results_cache", None)
-        st.session_state["_searching"] = False
         # Navegar a la página de resultados (no-widget state → sin conflicto)
         st.session_state["_page"] = "Resultados"
         st.rerun()
@@ -154,6 +153,5 @@ def render_query_view():
         }
         st.session_state.pop("_results_cache_key", None)
         st.session_state.pop("_results_cache", None)
-        st.session_state.pop("_searching", None)
         st.session_state["_page"] = "Búsqueda"
         st.rerun()

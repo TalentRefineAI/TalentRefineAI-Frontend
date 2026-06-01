@@ -11,6 +11,7 @@ from utils.api_client import get_api_client
 
 def render_results_view():
     st.header("Resultados de Búsqueda")
+
     last_search = st.session_state.get("last_search")
     if not isinstance(last_search, dict) or not last_search.get("should_search"):
         return
@@ -21,37 +22,15 @@ def render_results_view():
     locations = last_search.get("locations")
     skills = last_search.get("skills")
 
-    # Clave de cache: evita rellamar a la API si los parametros no cambiaron
     cache_key = f"{query}|{experience_min}|{experience_max}|{str(locations)}|{str(skills)}"
 
-    # ── ESTADO: decidir si estamos buscando o mostrando resultados ──────────
-    #
-    # La busqueda usa tres estados en session_state:
-    #   _results_cache_key  → clave de la ultima busqueda en cache
-    #   _results_cache      → resultados de la ultima busqueda
-    #   _searching          → True mientras la llamada a la API esta en curso
-    #
-    # Flujo:
-    #   Render 1 (cache miss): activa _searching=True + st.rerun()  →  muestra placeholder
-    #   Render 2 (_searching=True): llama a la API, guarda resultado, desactiva _searching + st.rerun()
-    #   Render 3 (cache hit): muestra resultados completos
-
-    cache_miss = st.session_state.get("_results_cache_key") != cache_key
-
-    if cache_miss and not st.session_state.get("_searching"):
-        # Render 1: primera vez que vemos esta consulta → activar modo busqueda
-        st.session_state["_searching"] = True
-        st.session_state.pop("_results_cache", None)
-        st.rerun()
-        return
-
-    if st.session_state.get("_searching"):
-        # Render 2: modo busqueda activo → mostrar placeholder y llamar a la API
+    # ── BÚSQUEDA ─────────────────────────────────────────────────────────────
+    # Si no hay cache para esta consulta, ejecutar la búsqueda con spinner visible.
+    # st.spinner() es el indicador de carga más fiable de Streamlit (desde v0.6):
+    # muestra el spinner ANTES de ejecutar el bloque y lo oculta al terminar.
+    if st.session_state.get("_results_cache_key") != cache_key:
         st.markdown(f"**Consulta:** _{query}_")
-        st.info("⏳ Analizando CVs e identificando candidatos relevantes...")
-
-        with st.status("Buscando candidatos...", expanded=True) as _status:
-            st.write("Generando embedding semántico de la consulta...")
+        with st.spinner("🔍 Buscando candidatos — generando embeddings y analizando CVs con IA..."):
             api_client = get_api_client()
             results = api_client.query_rag(
                 query=query,
@@ -59,7 +38,7 @@ def render_results_view():
                 experience_max=experience_max,
                 locations=locations,
             )
-            # Reintento silencioso si la primera llamada devuelve vacio (fallback ante arranque en frio)
+            # Reintento silencioso ante arranque en frío de Qdrant
             if not results.get("candidates") and results.get("status") != "error":
                 results = api_client.query_rag(
                     query=query,
@@ -67,28 +46,12 @@ def render_results_view():
                     experience_max=experience_max,
                     locations=locations,
                 )
-
-            if results.get("status") == "error":
-                _status.update(
-                    label="Error al contactar el servicio RAG",
-                    state="error",
-                    expanded=True,
-                )
-            else:
-                n = len(results.get("candidates") or [])
-                _label = (
-                    f"Búsqueda completada — {n} candidato{'s' if n != 1 else ''} encontrado{'s' if n != 1 else ''}"
-                )
-                _status.update(label=_label, state="complete", expanded=False)
-
         st.session_state["_results_cache"] = results
         st.session_state["_results_cache_key"] = cache_key
-        st.session_state["_searching"] = False
         st.rerun()
         return
 
-
-    # ── FASE 2: resultados disponibles en cache ───────────────────────────────
+    # ── RESULTADOS (cache hit) ────────────────────────────────────────────────
     results = st.session_state["_results_cache"]
 
     st.markdown(f"**Consulta:** _{query}_")
@@ -294,8 +257,8 @@ def _get_score_color(score: int) -> str:
     elif score >= 80:
         return "#00c9b7"
     elif score >= 70:
-        return "#ffd700"
+        return "#fcb900"
     elif score >= 60:
-        return "#ffa500"
+        return "#ff6900"
     else:
-        return "#ff6b6b"
+        return "#cf2e2e"
