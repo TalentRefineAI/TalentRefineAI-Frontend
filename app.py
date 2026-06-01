@@ -20,7 +20,6 @@ Características:
 import streamlit as st
 from components.upload_view import render_upload_view
 from components.query_view import render_query_view
-from components.results_view import render_results_view
 
 
 # ============================================================================
@@ -85,7 +84,7 @@ def _initialize_session_state():
         st.session_state.favorite_candidates = []
 
     if "nav_page" not in st.session_state:
-        st.session_state.nav_page = "Subida de CVs"
+        st.session_state["nav_page"] = "Subida de CVs"
 
 
 def _render_sidebar():
@@ -98,18 +97,9 @@ def _render_sidebar():
         
         # Navegación principal
         st.markdown("### Navegación")
-        has_results = st.session_state.get("last_search", {}).get("should_search", False)
-        nav_options = ["Subida de CVs", "Búsqueda", "Resultados"] if has_results else ["Subida de CVs", "Búsqueda"]
-        # Flush any navigation request set by child components before widget creation
-        if "_nav_page_request" in st.session_state:
-            st.session_state.nav_page = st.session_state["_nav_page_request"]
-            del st.session_state["_nav_page_request"]
-        # Guard: if nav_page points to Resultados but no search has been done, reset
-        if not has_results and st.session_state.get("nav_page") == "Resultados":
-            st.session_state.nav_page = "Búsqueda"
         current_page = st.radio(
             label="Selecciona una sección:",
-            options=nav_options,
+            options=["Subida de CVs", "Búsqueda"],
             key="nav_page",
             label_visibility="collapsed"
         )
@@ -127,9 +117,6 @@ def _render_main_content(page: str):
     
     elif page == "Búsqueda":
         render_query_view()
-    
-    elif page == "Resultados":
-        render_results_view()
 
 
 # ============================================================================

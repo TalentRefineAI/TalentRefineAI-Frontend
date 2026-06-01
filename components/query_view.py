@@ -7,6 +7,7 @@ Incluye desplegables, sliders y área de texto para consultas semánticas.
 import streamlit as st
 from typing import Dict, List, Any
 from utils.api_client import get_api_client
+from components.results_view import render_results_view
 
 
 def render_query_view():
@@ -126,25 +127,35 @@ def render_query_view():
         if not semantic_query.strip():
             st.error("Por favor, ingresa una consulta semántica.")
             return
-        
-        # Guardar en session state para que results_view pueda acceder
-        st.session_state.last_search = {
+
+        st.session_state["last_search"] = {
             "query": semantic_query,
             "experience_min": experience_min,
             "experience_max": 20,
             "locations": selected_locations if selected_locations else None,
             "skills": selected_skills if selected_skills else None,
-            "should_search": True
+            "should_search": True,
         }
-        # Invalidar caché y estado de busqueda para forzar llamada fresca
+        # Invalidar caché y reiniciar máquina de estados
         st.session_state.pop("_results_cache_key", None)
         st.session_state.pop("_results_cache", None)
-        st.session_state["_searching"] = False  # reiniciar maquina de estados
-        # Navegar automaticamente a la vista de Resultados
-        st.session_state._nav_page_request = "Resultados"
+        st.session_state["_searching"] = False
         st.rerun()
-    
+
     if clear_button:
-        if "last_search" in st.session_state:
-            del st.session_state.last_search
+        st.session_state["last_search"] = {
+            "query": "",
+            "experience_min": 0,
+            "experience_max": 20,
+            "locations": None,
+            "skills": None,
+            "should_search": False,
+        }
+        st.session_state.pop("_results_cache_key", None)
+        st.session_state.pop("_results_cache", None)
+        st.session_state.pop("_searching", None)
         st.rerun()
+
+    # Mostrar resultados inline debajo del formulario
+    st.divider()
+    render_results_view()
