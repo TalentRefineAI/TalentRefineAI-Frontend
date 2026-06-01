@@ -27,37 +27,51 @@ def render_results_view():
     # Clave de cache: evita rellamar a la API si los parametros no cambiaron
     cache_key = f"{query}|{experience_min}|{experience_max}|{str(locations)}|{str(skills)}"
 
-    # ── FASE 1: busqueda en curso ─────────────────────────────────────────────
-    # Si no hay cache, llamamos a la API y mostramos SOLO el indicador de carga.
-    # Incluye logica de reintento: si la primera llamada devuelve 0 candidatos
-    # (posible falso negativo por cold-start del servicio), reintentamos hasta
-    # _MAX_RETRIES veces antes de aceptar el resultado vacio.
-    # Streamlit permanece en estado "running" durante toda la fase 1.
-    _MAX_RETRIES = 3
-    _RETRY_DELAY = 1.0  # segundos entre reintentos
+    # ── ESTADO: decidir si estamos buscando o mostrando resultados ──────────
+    #
+    # La busqueda usa tres estados en session_state:
+    #   _results_cache_key  → clave de la ultima busqueda en cache
+    #   _results_cache      → resultados de la ultima busqueda
+    #   _searching          → True mientras la llamada a la API esta en curso
+    #
+    # Flujo:
+    #   Render 1 (cache miss): activa _searching=True + st.rerun()  →  muestra placeholder
+    #   Render 2 (_searching=True): llama a la API, guarda resultado, desactiva _searching + st.rerun()
+    #   Render 3 (cache hit): muestra resultados completos
 
-    if st.session_state.get("_results_cache_key") != cache_key:
+    cache_miss = st.session_state.get("_results_cache_key") != cache_key
+
+    if cache_miss and not st.session_state.get("_searching"):
+        # Render 1: primera vez que vemos esta consulta → activar modo busqueda
+        st.session_state["_searching"] = True
+        st.session_state.pop("_results_cache", None)
+        st.rerun()
+        return
+
+    if st.session_state.get("_searching"):
+        # Render 2: modo busqueda activo → mostrar placeholder y llamar a la API
         st.markdown(f"**Consulta:** _{query}_")
-        with st.status("Buscando candidatos...", expanded=True) as _status:
-            api_client = get_api_client()
-            results = None
-            for _attempt in range(1, _MAX_RETRIES + 1):
-                if _attempt == 1:
-                    st.write("Conectando con el servicio RAG y generando embedding...")
-                else:
-                    st.write(f"El servicio aún está procesando, reintentando... (intento {_attempt}/{_MAX_RETRIES})")
-                    time.sleep(_RETRY_DELAY)
+        st.info("⏳ Analizando CVs e identificando candidatos relevantes...")
 
+        with st.status("Buscando candidatos...", expanded=True) as _status:
+            st.write("Generando embedding semántico de la consulta...")
+            api_client = get_api_client()
+            results = api_client.query_rag(
+                query=query,
+                experience_min=experience_min,
+                experience_max=experience_max,
+                locations=locations,
+            )
+            # Reintento unico si la primera llamada devuelve vacio (robustez ante fallos transitorios)
+            if not results.get("candidates") and results.get("status") != "error":
+                st.write("Sin resultados en primer intento, reintentando en 2s...")
+                time.sleep(2)
                 results = api_client.query_rag(
                     query=query,
                     experience_min=experience_min,
                     experience_max=experience_max,
                     locations=locations,
                 )
-
-                # Parar si hay candidatos o si hay error (no reintentar errores)
-                if results.get("candidates") or results.get("status") == "error":
-                    break
 
             if results.get("status") == "error":
                 _status.update(
@@ -74,9 +88,10 @@ def render_results_view():
 
         st.session_state["_results_cache"] = results
         st.session_state["_results_cache_key"] = cache_key
-        # Rerun para mostrar la vista de resultados en una pasada limpia
+        st.session_state["_searching"] = False
         st.rerun()
-        return  # nunca se alcanza; hace explicito que nada mas se renderiza aqui
+        return
+
 
     # ── FASE 2: resultados disponibles en cache ───────────────────────────────
     results = st.session_state["_results_cache"]
