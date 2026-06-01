@@ -40,6 +40,9 @@ def render_results_view():
         results = st.session_state["_results_cache"]
 
     st.markdown(f"**Consulta:** _{query}_")
+    _elapsed = results.get("metadata", {}).get("processing_time_ms", 0)
+    if _elapsed:
+        st.caption(f"⏱ Búsqueda completada en {_elapsed} ms")
 
     if results.get("status") == "error":
         st.error(f"Error al conectar con el servicio RAG: {results.get('message', 'Error desconocido')}")
@@ -48,7 +51,10 @@ def render_results_view():
     if results.get("candidates"):
         st.success(f"Se encontraron {len(results['candidates'])} candidatos relevantes")
     else:
-        st.warning("No se encontraron candidatos con los criterios especificados. Intenta una consulta diferente o sube mas CVs.")
+        _msg = "No se encontraron candidatos con los criterios especificados. Intenta una consulta diferente o sube mas CVs."
+        if _elapsed:
+            _msg += f" (búsqueda ejecutada en {_elapsed} ms — el servicio RAG está activo)"
+        st.warning(_msg)
         return
 
     st.divider()
@@ -64,8 +70,7 @@ def render_results_view():
             skills_count = len(skills) if skills and isinstance(skills, (list, tuple)) else 0
             st.write(f"**Habilidades filtradas:** {skills_count}")
         with col4:
-            processing_time = results.get("metadata", {}).get("processing_time_ms", 0)
-            st.write(f"**Tiempo de busqueda:** {processing_time}ms")
+            st.write(f"**Tiempo de busqueda:** {_elapsed}ms")
 
     st.divider()
     st.subheader("Candidatos Recomendados")

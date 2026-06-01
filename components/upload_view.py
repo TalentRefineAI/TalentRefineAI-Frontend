@@ -45,9 +45,16 @@ def _render_candidates_modal() -> None:
             if "_candidates_cache" not in st.session_state:
                 with st.spinner("Cargando candidatos..."):
                     api = get_api_client()
+                    _t0 = time.perf_counter()
                     data = api.list_candidates()
+                    _elapsed_ms = round((time.perf_counter() - _t0) * 1000)
+                    # Prefer backend-measured time if available
+                    _backend_ms = getattr(api, "_last_list_candidates_ms", 0)
+                    _display_ms = _backend_ms or _elapsed_ms
                 st.session_state["_candidates_cache"] = data
-                st.session_state["_candidates_ts"] = datetime.datetime.now().strftime("%H:%M:%S")
+                st.session_state["_candidates_ts"] = (
+                    f"{datetime.datetime.now().strftime('%H:%M:%S')} ({_display_ms} ms)"
+                )
 
             with ts_col:
                 if "_candidates_ts" in st.session_state:

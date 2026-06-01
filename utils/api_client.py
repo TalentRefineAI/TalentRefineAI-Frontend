@@ -4,6 +4,7 @@ Gestiona las llamadas HTTP a los endpoints de FastAPI.
 """
 
 import os
+import time
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
@@ -147,11 +148,15 @@ class RAGAPIClient:
                 "required_location": required_location,
                 "top_k": min(top_k, 20),
             }
+            _t0 = time.perf_counter()
             response = self.session.post(url, json=payload, timeout=self.timeout)
+            _elapsed_ms = round((time.perf_counter() - _t0) * 1000)
             response.raise_for_status()
             body = response.json()
             # Backend returns SearchResponse { results: [CandidateResult, ...] }
             candidates = [_map_candidate_result(r) for r in body.get("results", [])]
+            # Use backend-measured time if available, fall back to client-side RTT
+            _backend_ms = body.get("processing_time_ms") or 0
             return {
                 "query": query,
                 "total_results": len(candidates),
@@ -160,7 +165,7 @@ class RAGAPIClient:
                 "metadata": {
                     "experience_range": f"{experience_min}-{experience_max} anos",
                     "locations_filtered": locations if locations else "Todas",
-                    "processing_time_ms": 0,
+                    "processing_time_ms": _backend_ms or _elapsed_ms,
                 },
             }
         except requests.exceptions.RequestException as e:
@@ -191,11 +196,16 @@ class RAGAPIClient:
             ]
         try:
             url = f"{self.rag_base_url}/search/candidates"
+            _t0 = time.perf_counter()
             response = self.session.get(url, timeout=self.timeout)
+            _elapsed_ms = round((time.perf_counter() - _t0) * 1000)
             response.raise_for_status()
             body = response.json()
+            # Store timing so callers can display it
+            self._last_list_candidates_ms = body.get("processing_time_ms") or _elapsed_ms
             return body.get("candidates", [])
         except requests.exceptions.RequestException:
+            self._last_list_candidates_ms = 0
             return []
 
     def get_candidate_details(self, candidate_id: str) -> Dict[str, Any]:
