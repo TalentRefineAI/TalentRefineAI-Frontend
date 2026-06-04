@@ -117,7 +117,7 @@ def main():
     _render_main_content(current_page)
 
     st.markdown(
-        "<div class='footer'>© 2024 TalentRefineAI — Todos los derechos reservados</div>",
+        "<div class='footer'>© 2026 TalentRefineAI — Todos los derechos reservados</div>",
         unsafe_allow_html=True,
     )
 

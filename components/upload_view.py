@@ -62,11 +62,26 @@ def _render_candidates_modal() -> None:
 
             candidates = st.session_state["_candidates_cache"]
 
-            if not candidates:
+            # "En proceso" = subidos en esta sesión pero aún no presentes en Qdrant.
+            # Se podan los que ya están indexados (pasaron de "en proceso" a "indexado").
+            indexed_ids = {c.get("candidate_id") for c in candidates}
+            uploaded_docs = st.session_state.get("uploaded_docs", {})
+            en_proceso = {
+                did: fname for did, fname in uploaded_docs.items() if did not in indexed_ids
+            }
+            st.session_state["uploaded_docs"] = en_proceso
+
+            # Cabecera con recuento combinado
+            total_label = f"**Total: {len(candidates)} indexado(s)"
+            if en_proceso:
+                total_label += f" + {len(en_proceso)} en proceso"
+            total_label += "**"
+            st.markdown(total_label)
+            st.markdown("---")
+
+            if not candidates and not en_proceso:
                 st.info("No hay candidatos indexados todavía.")
             else:
-                st.markdown(f"**Total: {len(candidates)} candidato(s)**")
-                st.markdown("---")
                 for c in candidates:
                     c1, c2, c3 = st.columns([3, 3, 4])
                     with c1:
@@ -76,6 +91,16 @@ def _render_candidates_modal() -> None:
                         st.markdown(email)
                     with c3:
                         st.caption(c.get("file_name", ""))
+
+                if en_proceso:
+                    st.markdown("---")
+                    st.markdown("**En proceso:**")
+                    for fname in en_proceso.values():
+                        p1, p2 = st.columns([6, 4])
+                        with p1:
+                            st.markdown(f"🔄 **{fname}**")
+                        with p2:
+                            st.caption("Procesando (indexación en segundo plano)")
 
 
 
@@ -101,24 +126,36 @@ def _render_delete_all_section() -> None:
             idx_result = api.delete_all_index()
             blob_result = api.delete_all_uploads()
 
-            if idx_result.get("deleted") and blob_result.get("deleted"):
-                # Limpiar estado local
+            idx_ok = idx_result.get("deleted", False)
+            blob_ok = blob_result.get("deleted", False)
+
+            if idx_ok:
+                # Qdrant es el almacén primario: si se borró, limpiar SIEMPRE el estado
+                # local aunque el blob fallara (no bloqueante).
                 st.session_state["processing_files"] = {}
+                st.session_state["uploaded_docs"] = {}
                 st.session_state.pop("_candidates_cache", None)
                 st.session_state["_show_candidates_panel"] = False
-                st.session_state["_process_result"] = {
-                    "type": "success",
-                    "msg": "✅ Todos los candidatos han sido eliminados del índice y del almacenamiento.",
-                }
+                if blob_ok:
+                    st.session_state["_process_result"] = {
+                        "type": "success",
+                        "msg": "✅ Todos los candidatos han sido eliminados del índice y del almacenamiento.",
+                    }
+                else:
+                    blob_err = blob_result.get("error", "error desconocido")
+                    st.session_state["_process_result"] = {
+                        "type": "warning",
+                        "msg": (
+                            "✅ Candidatos eliminados del índice. ⚠️ El almacenamiento de "
+                            f"archivos no pudo limpiarse ({blob_err}); se sobrescribirá "
+                            "automáticamente en la próxima subida."
+                        ),
+                    }
             else:
-                errors = []
-                if not idx_result.get("deleted"):
-                    errors.append(f"Qdrant: {idx_result.get('error', 'error desconocido')}")
-                if not blob_result.get("deleted"):
-                    errors.append(f"Blob: {blob_result.get('error', 'error desconocido')}")
+                idx_err = idx_result.get("error", "error desconocido")
                 st.session_state["_process_result"] = {
                     "type": "error",
-                    "msg": "Error al eliminar: " + "; ".join(errors),
+                    "msg": f"Error al eliminar del índice: {idx_err}",
                 }
             st.rerun()
 def render_upload_view():
@@ -171,7 +208,18 @@ def render_upload_view():
         )
     
     st.divider()
-    
+
+    # Mostrar resultado de la última operación (subida o "eliminar todo") SIEMPRE,
+    # aunque no haya archivos en el uploader — así el aviso de borrado aparece al instante.
+    if "_process_result" in st.session_state:
+        result = st.session_state.pop("_process_result")
+        if result["type"] == "success":
+            st.success(result["msg"])
+        elif result["type"] == "warning":
+            st.warning(result["msg"])
+        else:
+            st.error(result["msg"])
+
     # Procesar archivos subidos
     if uploaded_files:
         st.subheader("Estado de Procesamiento")
@@ -235,15 +283,7 @@ def render_upload_view():
         # Mostrar resumen de estadísticas
         st.divider()
         _render_upload_statistics(uploaded_files)
-        # Mostrar resultado del procesamiento si existe
-        if "_process_result" in st.session_state:
-            result = st.session_state["_process_result"]
-            del st.session_state["_process_result"]
-            if result["type"] == "success":
-                st.success(result["msg"])
-            else:
-                st.error(result["msg"])
-    
+
     else:
         # Mostrar mensaje cuando no hay archivos
         st.info(
@@ -281,8 +321,13 @@ def _process_files(uploaded_files: List):
         st.session_state["_process_result"] = {"type": "error", "msg": upload_message}
         st.rerun()
 
+    # Registrar los doc_id subidos para distinguir "en proceso" (subido pero aún no en
+    # Qdrant) de "indexado" en el panel de candidatos. doc_id == candidate_id en Qdrant.
+    uploaded_docs = st.session_state.setdefault("uploaded_docs", {})
+
     for idx, (uploaded_file, doc_id) in enumerate(zip(uploaded_files, document_ids)):
         file_name = uploaded_file.name
+        uploaded_docs[str(doc_id)] = file_name
         st.session_state.processing_files[file_name]["status"] = "processing"
         st.session_state.processing_files[file_name]["progress"] = 10
 

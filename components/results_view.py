@@ -24,6 +24,11 @@ def render_results_view():
 
     cache_key = f"{query}|{experience_min}|{experience_max}|{str(locations)}|{str(skills)}"
 
+    # Indicador inmediato de "running": se muestra en el primer render de esta página,
+    # antes de que el spinner arranque, llenando el hueco visual tras pulsar "Buscar".
+    if st.session_state.get("_searching", False):
+        st.info("🔍 Buscando candidatos — por favor espera...")
+
     # ── BÚSQUEDA ─────────────────────────────────────────────────────────────
     # Si no hay cache para esta consulta, ejecutar la búsqueda con spinner visible.
     # st.spinner() es el indicador de carga más fiable de Streamlit (desde v0.6):
@@ -48,6 +53,8 @@ def render_results_view():
                 )
         st.session_state["_results_cache"] = results
         st.session_state["_results_cache_key"] = cache_key
+        # Liberar el botón "Buscar": la búsqueda ha terminado
+        st.session_state["_searching"] = False
         st.rerun()
         return
 
