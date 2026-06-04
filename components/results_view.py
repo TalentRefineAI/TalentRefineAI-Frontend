@@ -101,9 +101,6 @@ def render_results_view():
     st.subheader("Acciones")
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("Enviar Invitaciones", use_container_width=True):
-            st.session_state["_action_msg"] = ("success", "Se han enviado invitaciones a los candidatos seleccionados.")
-    with col2:
         report_text = _generate_report(query, candidates, results.get("metadata", {}))
         ts = datetime.now().strftime("%Y%m%d_%H%M")
         st.download_button(
