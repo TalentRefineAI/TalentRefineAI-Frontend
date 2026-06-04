@@ -44,6 +44,8 @@ def _initialize_session_state():
         }
     if "processing_files" not in st.session_state:
         st.session_state["processing_files"] = {}
+    if "_uploader_key" not in st.session_state:
+        st.session_state["_uploader_key"] = 0
     if "favorite_candidates" not in st.session_state:
         st.session_state["favorite_candidates"] = []
     # _page is the authoritative current-page state (NOT a widget key)

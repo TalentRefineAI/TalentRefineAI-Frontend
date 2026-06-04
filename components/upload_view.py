@@ -191,12 +191,14 @@ def render_upload_view():
     col1, col2 = st.columns([3, 1])
     
     with col1:
-        # Área de subida de archivos (Streamlit maneja Drag & Drop automáticamente)
+        # Área de subida de archivos (Streamlit maneja Drag & Drop automáticamente).
+        # La key incluye _uploader_key para que cambiar el contador resetee el widget.
         uploaded_files = st.file_uploader(
             label="Arrastra y suelta archivos PDF aquí o haz clic para seleccionar",
             type=["pdf"],
             accept_multiple_files=True,
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            key=f"file_uploader_{st.session_state.get('_uploader_key', 0)}",
         )
     
     with col2:
@@ -278,6 +280,9 @@ def render_upload_view():
         with col2:
             if st.button("Limpiar", use_container_width=True):
                 st.session_state.processing_files = {}
+                # Incrementar la key del uploader fuerza a Streamlit a recrear el
+                # widget desde cero, vaciando los archivos seleccionados.
+                st.session_state["_uploader_key"] = st.session_state.get("_uploader_key", 0) + 1
                 st.rerun()
         
         # Mostrar resumen de estadísticas
