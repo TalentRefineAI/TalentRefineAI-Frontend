@@ -3,6 +3,7 @@ Componente de resultados (FE-04).
 Renderiza tarjetas dinamicas con candidatos clasificados por relevancia.
 """
 
+import json
 import streamlit as st
 import streamlit.components.v1 as components
 from datetime import datetime
@@ -129,13 +130,16 @@ def render_results_view():
     st.subheader("Acciones")
     col1, col2 = st.columns(2)
     with col1:
-        report_text = _generate_report(query, candidates, results.get("metadata", {}))
+        report_json = _generate_report_json(
+            query, candidates, results.get("metadata", {}),
+            experience_min, experience_max, locations, skills,
+        )
         ts = datetime.now().strftime("%Y%m%d_%H%M")
         st.download_button(
-            label="Generar Reporte",
-            data=report_text.encode("utf-8"),
-            file_name=f"reporte_candidatos_{ts}.txt",
-            mime="text/plain",
+            label="Generar Reporte (JSON)",
+            data=report_json.encode("utf-8"),
+            file_name=f"reporte_candidatos_{ts}.json",
+            mime="application/json",
             use_container_width=True,
         )
 
@@ -148,46 +152,58 @@ def render_results_view():
     st.session_state["_searching"] = False
 
 
-def _generate_report(query: str, candidates: List[Dict[str, Any]], metadata: dict) -> str:
-    """Genera un informe de texto con los candidatos encontrados."""
-    lines = [
-        "=" * 60,
-        "REPORTE DE BUSQUEDA DE CANDIDATOS",
-        "=" * 60,
-        f"Fecha:    {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-        f"Consulta: {query}",
-        f"Total candidatos encontrados: {len(candidates)}",
-        "",
-    ]
-    for i, c in enumerate(candidates, 1):
-        lines += [
-            f"{'=' * 60}",
-            f"#{i}  {c.get('name', 'N/A')}  —  Relevancia: {c.get('match_score', 0)}%",
-            f"{'=' * 60}",
-            f"  Email:        {c.get('email', 'N/A')}",
-            f"  Telefono:     {c.get('phone', 'N/A')}",
-            f"  Ubicacion:    {c.get('location', 'N/A')}",
-            f"  Experiencia:  {c.get('experience_years', 0)} anos",
-        ]
-        skills = c.get("skills", [])
-        if skills:
-            lines.append(f"  Habilidades:  {', '.join(skills)}")
-        summary = c.get("expertise_summary", "")
-        if summary:
-            lines.append(f"  Resumen:      {summary}")
-        just = c.get("llm_justification", "")
-        if just:
-            lines += [
-                "  Justificacion RAG:",
-                f"    {just}",
-            ]
-        lines.append("")
-    lines += [
-        "=" * 60,
-        "Generado por TalentRefineAI",
-        "=" * 60,
-    ]
-    return "\n".join(lines)
+def _generate_report_json(
+    query: str,
+    candidates: List[Dict[str, Any]],
+    metadata: dict,
+    experience_min: int,
+    experience_max: int,
+    locations: Any,
+    skills: Any,
+) -> str:
+    """Genera un reporte JSON estructurado de la búsqueda, pensado para reutilizarse
+    como dataset de entrenamiento (query + filtros + candidatos con score y análisis LLM).
+    """
+    report = {
+        "schema_version": "1.0",
+        "report_type": "candidate_search_result",
+        "generated_at": datetime.now().isoformat(),
+        "query": {
+            "job_description": query,
+            "filters": {
+                "experience_min": experience_min,
+                "experience_max": experience_max,
+                "locations": list(locations) if locations else None,
+                "skills": list(skills) if skills else None,
+            },
+        },
+        "search_metadata": {
+            "total_results": len(candidates),
+            "processing_time_ms": metadata.get("processing_time_ms", 0),
+        },
+        "candidates": [
+            {
+                "rank": i,
+                "candidate_id": c.get("id", ""),
+                "document_name": c.get("document_name", ""),
+                "match_score": c.get("match_score", 0),
+                "profile": {
+                    "name": c.get("name", ""),
+                    "email": c.get("email", ""),
+                    "phone": c.get("phone", ""),
+                    "location": c.get("location", ""),
+                    "experience_years": c.get("experience_years", 0),
+                    "skills": c.get("skills", []),
+                },
+                "llm_analysis": {
+                    "expertise_summary": c.get("expertise_summary", ""),
+                    "justification": c.get("llm_justification", ""),
+                },
+            }
+            for i, c in enumerate(candidates, 1)
+        ],
+    }
+    return json.dumps(report, ensure_ascii=False, indent=2)
 
 
 def _render_candidate_card(candidate: Dict[str, Any], position: int):
