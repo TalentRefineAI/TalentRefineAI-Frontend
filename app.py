@@ -48,6 +48,14 @@ def _initialize_session_state():
         st.session_state["_uploader_key"] = 0
     if "favorite_candidates" not in st.session_state:
         st.session_state["favorite_candidates"] = []
+    if "_custom_skills" not in st.session_state:
+        st.session_state["_custom_skills"] = []
+    if "_skill_input_counter" not in st.session_state:
+        st.session_state["_skill_input_counter"] = 0
+    if "_custom_locations" not in st.session_state:
+        st.session_state["_custom_locations"] = []
+    if "_loc_input_counter" not in st.session_state:
+        st.session_state["_loc_input_counter"] = 0
     # _page is the authoritative current-page state (NOT a widget key)
     if "_page" not in st.session_state:
         st.session_state["_page"] = "Subida de CVs"

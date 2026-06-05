@@ -4,6 +4,7 @@ Renderiza tarjetas dinamicas con candidatos clasificados por relevancia.
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 from datetime import datetime
 from typing import Dict, List, Any
 from utils.api_client import get_api_client
@@ -14,6 +15,7 @@ def render_results_view():
 
     last_search = st.session_state.get("last_search")
     if not isinstance(last_search, dict) or not last_search.get("should_search"):
+        st.session_state["_searching"] = False
         return
 
     query = last_search.get("query", "")
@@ -24,18 +26,12 @@ def render_results_view():
 
     cache_key = f"{query}|{experience_min}|{experience_max}|{str(locations)}|{str(skills)}"
 
-    # Indicador inmediato de "running": se muestra en el primer render de esta página,
-    # antes de que el spinner arranque, llenando el hueco visual tras pulsar "Buscar".
-    if st.session_state.get("_searching", False):
-        st.info("🔍 Buscando candidatos — por favor espera...")
-
     # ── BÚSQUEDA ─────────────────────────────────────────────────────────────
-    # Si no hay cache para esta consulta, ejecutar la búsqueda con spinner visible.
-    # st.spinner() es el indicador de carga más fiable de Streamlit (desde v0.6):
-    # muestra el spinner ANTES de ejecutar el bloque y lo oculta al terminar.
+    # Si no hay cache para esta consulta, ejecutar la búsqueda con st.status visible.
     if st.session_state.get("_results_cache_key") != cache_key:
         st.markdown(f"**Consulta:** _{query}_")
-        with st.spinner("🔍 Buscando candidatos — generando embeddings y analizando CVs con IA..."):
+        with st.status("🔍 Buscando candidatos...", expanded=True) as status_container:
+            st.write("Generando embeddings y analizando CVs con IA (puede tardar 30-60s en primer acceso)...")
             api_client = get_api_client()
             results = api_client.query_rag(
                 query=query,
@@ -43,23 +39,43 @@ def render_results_view():
                 experience_max=experience_max,
                 locations=locations,
             )
-            # Reintento silencioso ante arranque en frío de Qdrant
             if not results.get("candidates") and results.get("status") != "error":
+                st.write("Qdrant en arranque en frío, reintentando...")
                 results = api_client.query_rag(
                     query=query,
                     experience_min=experience_min,
                     experience_max=experience_max,
                     locations=locations,
                 )
+            if results.get("status") == "error":
+                status_container.update(label="Error en la búsqueda", state="error")
+            else:
+                status_container.update(label="✅ Búsqueda completada", state="complete")
         st.session_state["_results_cache"] = results
         st.session_state["_results_cache_key"] = cache_key
-        # Liberar el botón "Buscar": la búsqueda ha terminado
         st.session_state["_searching"] = False
         st.rerun()
         return
 
     # ── RESULTADOS (cache hit) ────────────────────────────────────────────────
     results = st.session_state["_results_cache"]
+
+    # Scroll al top: inyectar JS después del cache hit para que el usuario vea los resultados desde arriba
+    components.html("""
+    <script>
+      (function() {
+        var selectors = [
+          '[data-testid="stAppViewContainer"]',
+          'section.main', '.main'
+        ];
+        for (var s of selectors) {
+          var el = window.parent.document.querySelector(s);
+          if (el) { el.scrollTo({top: 0, behavior: 'smooth'}); break; }
+        }
+        window.parent.scrollTo({top: 0, behavior: 'smooth'});
+      })();
+    </script>
+    """, height=0)
 
     st.markdown(f"**Consulta:** _{query}_")
     _elapsed = results.get("metadata", {}).get("processing_time_ms", 0)
@@ -69,11 +85,13 @@ def render_results_view():
     if results.get("status") == "error":
         st.error(f"Error al conectar con el servicio RAG: {results.get('message', 'Error desconocido')}")
         st.info("Comprueba que los servicios backend estan activos.")
+        st.session_state["_searching"] = False
         return
     if results.get("candidates"):
         st.success(f"Se encontraron {len(results['candidates'])} candidatos relevantes")
     else:
         st.warning("No se encontraron candidatos con los criterios especificados. Intenta una consulta diferente o sube mas CVs.")
+        st.session_state["_searching"] = False
         return
 
     st.divider()
