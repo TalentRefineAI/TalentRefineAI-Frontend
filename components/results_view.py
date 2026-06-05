@@ -98,8 +98,26 @@ def render_results_view():
         st.info("Comprueba que los servicios backend estan activos.")
         st.session_state["_searching"] = False
         return
-    if results.get("candidates"):
-        st.success(f"Se encontraron {len(results['candidates'])} candidatos relevantes")
+
+    candidates = results.get("candidates", [])
+    if candidates:
+        # Cabecera de resultados: recuento a la izquierda, botón de reporte a la derecha
+        head_col1, head_col2 = st.columns([3, 1])
+        with head_col1:
+            st.success(f"Se encontraron {len(candidates)} candidatos relevantes")
+        with head_col2:
+            report_json = _generate_report_json(
+                query, candidates, results.get("metadata", {}),
+                experience_min, experience_max, locations, skills,
+            )
+            ts = datetime.now().strftime("%Y%m%d_%H%M")
+            st.download_button(
+                label="📥 Reporte (JSON)",
+                data=report_json.encode("utf-8"),
+                file_name=f"reporte_candidatos_{ts}.json",
+                mime="application/json",
+                use_container_width=True,
+            )
     else:
         st.warning("No se encontraron candidatos con los criterios especificados. Intenta una consulta diferente o sube mas CVs.")
         st.session_state["_searching"] = False
@@ -122,26 +140,8 @@ def render_results_view():
 
     st.divider()
     st.subheader("Candidatos Recomendados")
-    candidates = results.get("candidates", [])
     for idx, candidate in enumerate(candidates, 1):
         _render_candidate_card(candidate, idx)
-
-    st.divider()
-    st.subheader("Acciones")
-    col1, col2 = st.columns(2)
-    with col1:
-        report_json = _generate_report_json(
-            query, candidates, results.get("metadata", {}),
-            experience_min, experience_max, locations, skills,
-        )
-        ts = datetime.now().strftime("%Y%m%d_%H%M")
-        st.download_button(
-            label="Generar Reporte (JSON)",
-            data=report_json.encode("utf-8"),
-            file_name=f"reporte_candidatos_{ts}.json",
-            mime="application/json",
-            use_container_width=True,
-        )
 
     action = st.session_state.pop("_action_msg", None)
     if action:
