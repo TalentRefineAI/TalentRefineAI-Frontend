@@ -16,9 +16,9 @@ Construido con **Streamlit 1.30** y desplegado en Azure Container Apps.
 
 | Vista | Descripción |
 |-------|-------------|
-| **Subida de CVs** | Carga múltiples PDFs con Drag & Drop, barra de progreso por documento, estadísticas en tiempo real |
-| **Búsqueda** | Consulta semántica libre + filtros (experiencia mínima, ubicación, habilidades) |
-| **Resultados** | Candidatos ordenados por score híbrido con resumen y justificación del LLM |
+| **Subida de CVs** | Carga múltiples PDFs con Drag & Drop; seguimiento de estado por documento ("en proceso" vs indexado); panel de candidatos indexados; botón de borrado global |
+| **Búsqueda** | Consulta semántica libre + filtros (experiencia mínima, ubicación con tags custom, habilidades con tags custom); 5 ejemplos de consulta predefinidos |
+| **Resultados** | Candidatos ordenados por score híbrido con resumen, justificación y datos de contacto del LLM; descarga de PDF; generación de reporte |
 
 ---
 
@@ -26,15 +26,15 @@ Construido con **Streamlit 1.30** y desplegado en Azure Container Apps.
 
 ```
 TalentRefineAI-Frontend/
-├── app.py                    # Punto de entrada Streamlit (navegación + session state)
+├── app.py                    # Punto de entrada: navegación, session state, layout
 ├── Dockerfile
 ├── requirements.txt
 ├── components/
-│   ├── upload_view.py        # Vista de subida de CVs
-│   ├── query_view.py         # Vista de búsqueda con filtros
-│   └── results_view.py       # Vista de resultados y candidatos
+│   ├── upload_view.py        # Vista de subida y gestión de CVs
+│   ├── query_view.py         # Vista de búsqueda con filtros y tags custom
+│   └── results_view.py       # Vista de resultados y tarjetas de candidatos
 └── utils/
-    ├── api_client.py         # Cliente HTTP hacia los servicios backend
+    ├── api_client.py         # Cliente HTTP hacia ingest-service y rag-service
     └── mock_data.py          # Datos simulados para desarrollo local sin backend
 ```
 
@@ -81,7 +81,10 @@ La aplicación se abre en `http://localhost:8501`.
 
 ```bash
 docker build -t rag-hr-frontend:local .
-docker run -p 8501:8501   -e BACKEND_BASE_URL=http://host.docker.internal:8000   -e RAG_SERVICE_URL=http://host.docker.internal:8001   rag-hr-frontend:local
+docker run -p 8501:8501 \
+  -e BACKEND_BASE_URL=http://host.docker.internal:8000 \
+  -e RAG_SERVICE_URL=http://host.docker.internal:8001 \
+  rag-hr-frontend:local
 ```
 
 ---
@@ -94,9 +97,16 @@ Ver `OPERATIONS.md` en el repositorio backend para el flujo completo de build y 
 ACR=crtalentrefinedevspc
 RG=rg-talentrefine-dev-spc
 
-az acr build --registry $ACR   --image rag-hr-frontend:latest   --file Dockerfile .   --resource-group $RG
+az acr build --registry $ACR \
+  --image rag-hr-frontend:latest \
+  --file Dockerfile . \
+  --resource-group $RG
 
-az containerapp update   --name ca-frontend-talentrefine-dev-spc   --resource-group $RG   --image $ACR.azurecr.io/rag-hr-frontend:latest   --revision-suffix v$(date +%Y%m%d)
+az containerapp update \
+  --name ca-frontend-talentrefine-dev-spc \
+  --resource-group $RG \
+  --image $ACR.azurecr.io/rag-hr-frontend:latest \
+  --revision-suffix v$(date +%Y%m%d)
 ```
 
 ---
@@ -105,20 +115,30 @@ az containerapp update   --name ca-frontend-talentrefine-dev-spc   --resource-gr
 
 | Key | Tipo | Descripción |
 |-----|------|-------------|
-| `processing_files` | `dict[str, dict]` | Estado por nombre de archivo (`pending`/`processing`/`completed`/`error`) |
 | `last_search` | `dict` | Parámetros de la última búsqueda + flag `should_search` |
-| `_nav_page_request` | `str` | Navegación programática entre páginas |
-| `search_results` | `list` | Resultados de la última búsqueda RAG |
+| `_searching` | `bool` | `True` mientras la búsqueda está en curso; deshabilita el botón Buscar y activa el `st.status` en la vista de resultados |
+| `_results_cache` | `dict` | Respuesta cacheada del rag-service para la última consulta |
+| `_results_cache_key` | `str` | Clave derivada de los parámetros de búsqueda para invalidación de caché |
+| `_page` | `str` | Página activa: `"Subida de CVs"`, `"Búsqueda"` o `"Resultados"` |
+| `_uploader_key` | `int` | Contador para forzar reset del widget `file_uploader` tras "Limpiar" |
+| `uploaded_docs` | `dict` | `{doc_id: filename}` — documentos subidos en la sesión; permite distinguir "en proceso" vs indexados |
+| `_custom_skills` | `list` | Skills añadidas manualmente por el usuario (tags custom en el multiselect) |
+| `_custom_locations` | `list` | Ubicaciones añadidas manualmente por el usuario (tags custom en el multiselect) |
+| `_skills_multiselect` | `list` | Valor actual del multiselect de habilidades (widget key) |
+| `_locations_multiselect` | `list` | Valor actual del multiselect de ubicaciones (widget key) |
 
 ---
 
-## Guía de desarrollo
+## Notas de diseño importantes
 
-Ver [DEVELOPMENT.md](DEVELOPMENT.md) para convenciones de código, estructura de componentes
-y patrones de integración con la API.
+### Estado de búsqueda determinístico
 
----
+El indicador de carga (`st.status`) se activa si y solo si `_searching=True` al renderizar la página de Resultados. `_searching` lo establece el botón Buscar antes del `st.rerun()`. No hay dependencia de cache-miss para mostrar el spinner — el trigger es único y determinístico.
 
-## Changelog
+### Procesamiento de CVs en ACA
 
-Ver [CHANGELOG.md](CHANGELOG.md).
+El ingest-service llama al processing-service de forma síncrona (timeout 150s). Azure Container Apps mantiene la réplica viva mientras hay una petición HTTP activa, lo que evita que los CVs queden "en proceso" indefinidamente. El processing-service serializa el trabajo pesado internamente con un `asyncio.Semaphore(1)`.
+
+### Filtro de ubicación flexible
+
+El filtro de ubicación en el rag-service usa substring matching case-insensitive en Python (post-retrieval), no filtros exactos en Qdrant. `"Madrid"` hace match con `"Madrid, Spain"`, `"Madrid (España)"`, etc.
