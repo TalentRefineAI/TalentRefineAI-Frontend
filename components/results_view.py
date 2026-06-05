@@ -10,6 +10,23 @@ from typing import Dict, List, Any
 from utils.api_client import get_api_client
 
 
+_SCROLL_JS = """
+    <script>
+      (function() {
+        var selectors = [
+          '[data-testid="stAppViewContainer"]',
+          'section.main', '.main'
+        ];
+        for (var s of selectors) {
+          var el = window.parent.document.querySelector(s);
+          if (el) { el.scrollTo({top: 0, behavior: 'smooth'}); break; }
+        }
+        window.parent.scrollTo({top: 0, behavior: 'smooth'});
+      })();
+    </script>
+    """
+
+
 def render_results_view():
     st.header("Resultados de Búsqueda")
 
@@ -27,8 +44,10 @@ def render_results_view():
     cache_key = f"{query}|{experience_min}|{experience_max}|{str(locations)}|{str(skills)}"
 
     # ── BÚSQUEDA ─────────────────────────────────────────────────────────────
-    # Si no hay cache para esta consulta, ejecutar la búsqueda con st.status visible.
-    if st.session_state.get("_results_cache_key") != cache_key:
+    # _searching=True es el único trigger determinístico para ejecutar búsqueda.
+    # Lo activa el botón Buscar (query_view.py) ANTES del st.rerun(), garantizando
+    # que la búsqueda SIEMPRE se ejecuta exactamente una vez en este render.
+    if st.session_state.get("_searching", False):
         st.markdown(f"**Consulta:** _{query}_")
         with st.status("🔍 Buscando candidatos...", expanded=True) as status_container:
             st.write("Generando embeddings y analizando CVs con IA (puede tardar 30-60s en primer acceso)...")
@@ -51,31 +70,22 @@ def render_results_view():
                 status_container.update(label="Error en la búsqueda", state="error")
             else:
                 status_container.update(label="✅ Búsqueda completada", state="complete")
+
+        # Scroll to top right after the search completes (not on every subsequent rerun)
+        components.html(_SCROLL_JS, height=0)
+
+        # Cache the results and mark search as complete
         st.session_state["_results_cache"] = results
         st.session_state["_results_cache_key"] = cache_key
         st.session_state["_searching"] = False
-        st.rerun()
+
+        # NO st.rerun() — results render directly below the completed st.status
+
+    # ── RESULTADOS (mostrar resultados en cache) ──────────────────────────────
+    results = st.session_state.get("_results_cache")
+    if not results:
+        st.session_state["_searching"] = False
         return
-
-    # ── RESULTADOS (cache hit) ────────────────────────────────────────────────
-    results = st.session_state["_results_cache"]
-
-    # Scroll al top: inyectar JS después del cache hit para que el usuario vea los resultados desde arriba
-    components.html("""
-    <script>
-      (function() {
-        var selectors = [
-          '[data-testid="stAppViewContainer"]',
-          'section.main', '.main'
-        ];
-        for (var s of selectors) {
-          var el = window.parent.document.querySelector(s);
-          if (el) { el.scrollTo({top: 0, behavior: 'smooth'}); break; }
-        }
-        window.parent.scrollTo({top: 0, behavior: 'smooth'});
-      })();
-    </script>
-    """, height=0)
 
     st.markdown(f"**Consulta:** _{query}_")
     _elapsed = results.get("metadata", {}).get("processing_time_ms", 0)
@@ -133,6 +143,9 @@ def render_results_view():
     if action:
         kind, msg = action
         st.success(msg) if kind == "success" else st.info(msg)
+
+    # Final safeguard: ensure _searching is False when exiting normally
+    st.session_state["_searching"] = False
 
 
 def _generate_report(query: str, candidates: List[Dict[str, Any]], metadata: dict) -> str:
