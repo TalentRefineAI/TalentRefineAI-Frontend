@@ -115,6 +115,11 @@ Si `USE_MOCK_DATA=true` el cliente devuelve datos de `mock_data.py` sin llamar a
 # Modo mock (sin backend)
 USE_MOCK_DATA=true streamlit run app.py
 
-# Con backend local (requiere docker-compose.local-fake.yml activo en el backend)
-BACKEND_BASE_URL=http://localhost:8000 RAG_SERVICE_URL=http://localhost:8001 streamlit run app.py
+# Con backend local (requiere el stack local-fake del backend: `make dev-fake`).
+# El cliente (utils/api_client.py) lee INGEST_API_URL, PROCESS_API_URL y RAG_API_URL.
+# Puertos de host del backend local-fake: ingest 8001, processing 8002, rag 8003.
+INGEST_API_URL=http://localhost:8001 \
+PROCESS_API_URL=http://localhost:8002 \
+RAG_API_URL=http://localhost:8003 \
+streamlit run app.py
 ```
