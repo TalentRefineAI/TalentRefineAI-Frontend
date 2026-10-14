@@ -6,12 +6,6 @@ Construido con **Streamlit 1.30** y desplegado en Azure Container Apps.
 
 ---
 
-## Demo en producción
-
-**URL:** `https://ca-frontend-talentrefine-dev-spc.greenwave-4d796cb5.spaincentral.azurecontainerapps.io`
-
----
-
 ## Funcionalidades
 
 | Vista | Descripción |
